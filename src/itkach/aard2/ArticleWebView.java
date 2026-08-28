@@ -1,6 +1,7 @@
 package itkach.aard2;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -163,7 +164,7 @@ public class ArticleWebView extends SearchableWebView {
                     List<Long> tsList = new ArrayList<Long>();
                     tsList.add(System.currentTimeMillis());
                     times.put(url, tsList);
-                    view.loadUrl("javascript:" + styleSwitcherJs);
+                    view.evaluateJavascript(styleSwitcherJs, null);
                     try {
                         timer.schedule(applyStylePref, 250, 200);
                     } catch (IllegalStateException ex) {
@@ -192,8 +193,8 @@ public class ArticleWebView extends SearchableWebView {
                 else {
                     Log.w(TAG, "onPageFinished: Unexpected page finished event for " + url);
                 }
-                view.loadUrl("javascript:" + styleSwitcherJs +
-                        ";$SLOB.setStyleTitles($styleSwitcher.getTitles())");
+                view.evaluateJavascript(styleSwitcherJs +
+                        ";$SLOB.setStyleTitles($styleSwitcher.getTitles())", null);
                 applyStylePref();
             }
 
@@ -232,7 +233,11 @@ public class ArticleWebView extends SearchableWebView {
 
                 if (isExternal(uri)) {
                     Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-                    getContext().startActivity(browserIntent);
+                    try {
+                        getContext().startActivity(browserIntent);
+                    } catch (ActivityNotFoundException e) {
+                        Log.w(TAG, "No activity found for external URL: " + url, e);
+                    }
                     return true;
                 }
 
@@ -252,7 +257,12 @@ public class ArticleWebView extends SearchableWebView {
                 if (scheme.equals("http") && host.equals(LOCALHOST) && uri.getQueryParameter("blob") == null) {
                     Intent intent = new Intent(getContext(), ArticleCollectionActivity.class);
                     intent.setData(uri);
-                    getContext().startActivity(intent);
+                    try {
+                        getContext().startActivity(intent);
+                    } catch (ActivityNotFoundException e) {
+                        Log.w(TAG, "Failed to open internal article URL: " + url, e);
+                        return false;
+                    }
                     Log.d(TAG, "Overriding loading of " + url);
                     return true;
                 }
