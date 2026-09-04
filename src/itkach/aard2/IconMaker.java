@@ -1,10 +1,14 @@
 package itkach.aard2;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.support.v4.content.ContextCompat;
 import android.util.TypedValue;
-
-import com.kazy.fontdrawable.FontDrawable;
 
 
 class IconMaker {
@@ -41,31 +45,27 @@ class IconMaker {
     static final char IC_FULLSCREEN = '\uf065';
 
 
-    static FontDrawable make(Context context, char c, int sizeDp, int color) {
-        FontDrawable drawable = new FontDrawable.Builder(context, c, CUSTOM_FONT_PATH)
-                .setSizeDp(sizeDp)
-                .setColor(color)
-                .build();
-        return drawable;
+    static Drawable make(Context context, char c, int sizeDp, int color) {
+        return new IconDrawable(context, c, sizeDp, color);
     }
 
-    static FontDrawable makeWithColorRes(Context context, char c, int sizeDp, int colorRes) {
+    static Drawable makeWithColorRes(Context context, char c, int sizeDp, int colorRes) {
         return make(context, c, sizeDp, context.getResources().getColor(colorRes));
     }
 
-    static FontDrawable tab(Context context, char c) {
+    static Drawable tab(Context context, char c) {
         return makeWithColorRes(context, c, 21, R.color.tab_icon);
     }
 
-    static FontDrawable list(Context context, char c) {
+    static Drawable list(Context context, char c) {
         return makeWithColorRes(context, c, 26, R.color.list_icon);
     }
 
-    static FontDrawable actionBar(Context context, char c) {
+    static Drawable actionBar(Context context, char c) {
         return makeWithColorRes(context, c, 26, R.color.actionbar_icon);
     }
 
-    static FontDrawable text(Context context, char c) {
+    static Drawable text(Context context, char c) {
         TypedValue typedValue = new TypedValue();
         boolean wasResolved = context.getTheme().resolveAttribute(android.R.attr.textColorSecondary, typedValue, true);
         if (wasResolved) {
@@ -75,12 +75,41 @@ class IconMaker {
         return makeWithColorRes(context, c, 16, R.color.list_icon);
     }
 
-    static FontDrawable errorText(Context context, char c) {
+    static Drawable errorText(Context context, char c) {
         return makeWithColorRes(context, c, 16, android.R.color.holo_red_dark);
     }
 
-    static FontDrawable emptyView(Context context, char c) {
+    static Drawable emptyView(Context context, char c) {
         return makeWithColorRes(context, c, 52, R.color.empty_view_icon);
+    }
+
+    private static final class IconDrawable extends Drawable {
+        private final char icon;
+        private final Paint paint;
+        private final int sizePx;
+
+        IconDrawable(Context context, char icon, int sizeDp, int color) {
+            this.icon = icon;
+            this.sizePx = (int) (sizeDp * context.getResources().getDisplayMetrics().density + 0.5f);
+            this.paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
+            this.paint.setTypeface(Typeface.createFromAsset(context.getAssets(), CUSTOM_FONT_PATH));
+            this.paint.setTextSize(sizePx);
+            this.paint.setColor(color);
+            this.paint.setTextAlign(Paint.Align.CENTER);
+        }
+
+        @Override public void draw(Canvas canvas) {
+            Paint.FontMetrics metrics = paint.getFontMetrics();
+            float x = getBounds().exactCenterX();
+            float y = getBounds().exactCenterY() - (metrics.ascent + metrics.descent) / 2f;
+            canvas.drawText(String.valueOf(icon), x, y, paint);
+        }
+
+        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
+        @Override public void setColorFilter(ColorFilter colorFilter) { paint.setColorFilter(colorFilter); }
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
+        @Override public int getIntrinsicWidth() { return sizePx; }
+        @Override public int getIntrinsicHeight() { return sizePx; }
     }
 
 }
