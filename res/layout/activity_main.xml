@@ -1,4 +1,116 @@
-<android.support.v4.view.ViewPager xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/pager"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    android:layout_height="match_parent">
+
+    <!-- android:fitsSystemWindows="true" here (not on the Toolbar) is what
+         lets AppBarLayout capture WindowInsets into its own internal
+         lastInsets field, which its statusBarForeground draw path and
+         getTopInset() both depend on - see ArticleCollectionActivity's
+         layout for the full explanation and the decompiled evidence for
+         why it has to be set here specifically. This AppBarLayout never
+         hides (the Toolbar carries no scroll flags), so
+         getTotalScrollRange() isn't a concern here; only the
+         statusBarForeground/getTopInset() side of it applies. Its color
+         is set programmatically in Application.applyStatusBarAppearance()
+         - see there for why it can't just be ?attr/colorPrimary.
+
+         No manual padding is needed for the status bar inset itself:
+         because the Toolbar below has no android:fitsSystemWindows of its
+         own, AppBarLayout reserves that space in its own measurement
+         automatically, leaving a plain gap above the Toolbar (painted by
+         statusBarForeground) instead of growing the Toolbar's own
+         visibly-colored area. Padding the AppBarLayout by the status bar
+         inset here as well would double it, since AppBarLayout is already
+         reserving that space. ArticleCollectionActivity's Toolbar
+         deliberately does the opposite (fitsSystemWindows on the Toolbar
+         itself, growing it to include the inset) for a reason specific to
+         its collapsing behavior that doesn't apply here - see there. -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/toolbar_height"
+            android:background="?attr/colorPrimary"
+            app:titleTextColor="?attr/colorOnPrimary"
+            app:subtitleTextColor="?attr/colorOnPrimary"
+            android:theme="@style/ThemeOverlay.Aard2.Toolbar"
+            app:popupTheme="@style/ThemeOverlay.Aard2.ToolbarPopup"
+            app:contentInsetStart="0dp"
+            app:titleMarginStart="16dp">
+
+            <!-- Raw Toolbar children (not options-menu items) for the Lookup
+                 tab's search box - hosting it as a menu/actionLayout item
+                 left an unexplained, non-zero start gap no contentInset
+                 attribute could remove (see git history for the investigation).
+                 Raw children positioned via layout_gravity aren't subject to
+                 that: the end-gravity icon is declared first so it gets
+                 measured before the match_parent search box, which then
+                 fills exactly what's left. contentInsetStart is kept at 0dp
+                 so this reaches the true left edge - it turned out to apply
+                 to any start-gravity content, not just the title/nav area as
+                 first assumed, so the other tabs' title gets its own margin
+                 via titleMarginStart instead, which is independent of
+                 contentInsetStart. Visibility here is toggled by
+                 MainActivity per selected tab (only shown for Lookup). -->
+            <ImageButton
+                android:id="@+id/btnRandomArticle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/action_random_article"
+                android:padding="12dp"
+                android:visibility="gone" />
+
+            <!-- Fixed 40dp, centred in the 48dp Toolbar, for a compact box. Icon
+                 and hint are set in MainActivity; visibility is toggled per tab
+                 (shown only for Lookup). paddingStart insets the glass from the
+                 screen edge (contentInsetStart is 0 so the box spans full width);
+                 the Filter/find fields don't need it since they follow a back
+                 button. -->
+            <itkach.aard2.SearchField
+                android:id="@+id/fldLookup"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_gravity="center_vertical|start"
+                android:paddingStart="12dp"
+                android:visibility="gone" />
+
+        </androidx.appcompat.widget.Toolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Hosts the selected section's fragment; MainActivity adds all five once
+         and show/hide-s them so each keeps its state, and because hidden fragments
+         don't contribute options-menu items, only the visible one's menu reaches
+         the Toolbar - no manual menu-visibility juggling needed. -->
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Material Components (M2) style, not Material 3: the M3 NavigationBar
+         reserves label space and leaves the icon bottom-aligned with a large
+         dead band on top even when unlabeled (no per-item attr overrides it);
+         the M2 bar centres the icon in a compact 56dp row. Selection shows via
+         itemIconTint (checked vs unchecked) rather than the M3 pill. -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        style="@style/Widget.MaterialComponents.BottomNavigationView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        app:itemIconSize="24dp"
+        app:labelVisibilityMode="unlabeled"
+        app:menu="@menu/bottom_nav" />
+
+</LinearLayout>

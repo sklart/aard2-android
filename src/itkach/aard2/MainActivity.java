@@ -1,37 +1,62 @@
 package itkach.aard2;
 
-import android.app.ActionBar;
-import android.app.ActionBar.Tab;
-import android.app.FragmentTransaction;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.KeyEvent;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.google.android.material.appbar.AppBarLayout;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.regex.Pattern;
 
 import itkach.slob.Slob;
 
-public class MainActivity extends FragmentActivity implements
-        ActionBar.TabListener {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-    private AppSectionsPagerAdapter appSectionsPagerAdapter;
-    private ViewPager viewPager;
+
+    // The five sections, by position. Fragments are added once to R.id.content
+    // and shown/hidden as the bottom nav selection changes, so each keeps its
+    // state. Tags let us re-find them across recreation.
+    private static final String[] SECTION_TAGS = {
+            "section_lookup", "section_bookmarks", "section_history",
+            "section_dictionaries", "section_settings"
+    };
+    private static final int LOOKUP = 0;
+    private static final int DICTIONARIES = 3;
+    private static final String STATE_SELECTED = "selectedSection";
+    // Persisted so the last section is restored no matter how the app was last
+    // torn down. Instance state (STATE_SELECTED) covers an OS kill while the task
+    // is kept, but not a recents swipe-dismiss (Android discards a dismissed
+    // task's saved state) or the task ageing out - so this pref seeds the initial
+    // section whenever there is no saved instance state, giving "come back to the
+    // tab I left" consistently, which is what a user expects regardless of the
+    // framework's task-vs-process distinction.
+    private static final String PREF_LAST_SECTION = "lastSection";
+
+    private BottomNavigationView bottomNav;
+    private SearchField lookupField;
+    private View btnRandomArticle;
+    private Timer lookupTimer;
+    private String[] titles;
+    private int selectedPosition = LOOKUP;
 
     private Pattern[] NO_PASTE_PATTERNS = new Pattern[]{
             Patterns.WEB_URL,
@@ -45,117 +70,317 @@ public class MainActivity extends FragmentActivity implements
         app.installTheme(this);
         setContentView(R.layout.activity_main);
 
-        appSectionsPagerAdapter = new AppSectionsPagerAdapter(
-                getSupportFragmentManager());
+        Toolbar toolbar = getToolbar();
+        setSupportActionBar(toolbar);
+        final ActionBar actionBar = getSupportActionBar();
+        actionBar.setDisplayShowHomeEnabled(false);
+        actionBar.setDisplayHomeAsUpEnabled(false);
 
-        final ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_TABS);
+        lookupTimer = new Timer();
+        lookupField = toolbar.findViewById(R.id.fldLookup);
+        lookupField.setIcon(IconMaker.actionBar(this, IconMaker.IC_SEARCH));
+        lookupField.setQueryHint(getString(R.string.action_lookup));
+        lookupField.setOnQueryTextListener(new SearchField.OnQueryTextListener() {
 
-        viewPager = (ViewPager) findViewById(R.id.pager);
-        viewPager.setOffscreenPageLimit(appSectionsPagerAdapter.getCount());
-        viewPager.setAdapter(appSectionsPagerAdapter);
+            TimerTask scheduledLookup = null;
 
-        final String[] subtitles = new String[] {
-                getString(R.string.subtitle_lookup),
+            // Submit - the keyboard's search action and every programmatic
+            // setQuery (restoring the last query, clipboard auto-paste) - looks up
+            // immediately; the debounce in onQueryTextChange is only to avoid a
+            // find on every keystroke while the user is typing.
+            @Override
+            public void onQueryTextSubmit(String query) {
+                if (scheduledLookup != null) {
+                    scheduledLookup.cancel();
+                    scheduledLookup = null;
+                }
+                if (!app.getLookupQuery().equals(query)) {
+                    app.lookup(query);
+                }
+            }
+
+            @Override
+            public void onQueryTextChange(String newText) {
+                TimerTask doLookup = new TimerTask() {
+                    @Override
+                    public void run() {
+                        final String query = lookupField.getQuery().toString();
+                        if (app.getLookupQuery().equals(query)) {
+                            return;
+                        }
+                        runOnUiThread(() -> app.lookup(query));
+                        scheduledLookup = null;
+                    }
+                };
+                final String query = lookupField.getQuery().toString();
+                if (!app.getLookupQuery().equals(query)) {
+                    if (scheduledLookup != null) {
+                        scheduledLookup.cancel();
+                    }
+                    scheduledLookup = doLookup;
+                    lookupTimer.schedule(doLookup, 600);
+                }
+            }
+        });
+
+        btnRandomArticle = toolbar.findViewById(R.id.btnRandomArticle);
+        ((ImageButton) btnRandomArticle).setImageDrawable(IconMaker.actionBar(this, IconMaker.IC_RANDOM));
+        btnRandomArticle.setOnClickListener(v -> {
+            Slob.Blob blob = app.random();
+            if (blob == null) {
+                Toast.makeText(this,
+                        R.string.article_collection_nothing_found,
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent intent = new Intent(this, ArticleCollectionActivity.class);
+            intent.setData(Uri.parse(app.getUrl(blob)));
+            startActivity(intent);
+        });
+
+        // Lookup (position 0) shows no title: its search box needs the Toolbar's
+        // full width, and a "Lookup" title beside a search box is redundant.
+        // Every other section shows its own name.
+        titles = new String[] {
+                "",
                 getString(R.string.subtitle_bookmark),
                 getString(R.string.subtitle_history),
                 getString(R.string.subtitle_dictionaries),
                 getString(R.string.subtitle_settings),
         };
 
-        viewPager
-                .setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
-                    @Override
-                    public void onPageSelected(int position) {
-                        actionBar.setSelectedNavigationItem(position);
-                        actionBar.setSubtitle(subtitles[position]);
-                    }
-                });
+        final AppBarLayout appBar = (AppBarLayout) findViewById(R.id.appbar);
+        // Status bar backdrop + system icon appearance follow the DEVICE's dark
+        // mode (not this app's preference) - see applyStatusBarAppearance. It
+        // must run on the AppBarLayout itself, whose fitsSystemWindows reserves
+        // the status bar space (see the layout). The bottom navigation bar inset
+        // is applied by BottomNavigationView itself.
+        app.applyStatusBarAppearance(this, appBar);
 
-        Drawable[] tabIcons = new Drawable[5];
-        tabIcons[0] = IconMaker.tab(this, IconMaker.IC_SEARCH);
-        tabIcons[1] = IconMaker.tab(this, IconMaker.IC_BOOKMARK);
-        tabIcons[2] = IconMaker.tab(this, IconMaker.IC_HISTORY);
-        tabIcons[3] = IconMaker.tab(this, IconMaker.IC_DICTIONARY);
-        tabIcons[4] = IconMaker.tab(this, IconMaker.IC_SETTINGS);
-        // For each of the sections in the app, add a tab to the action bar.
-        for (int i = 0; i < appSectionsPagerAdapter.getCount(); i++) {
-            Tab tab = actionBar.newTab();
-            tab.setTabListener(this);
-            tab.setIcon(tabIcons[i]);
-            actionBar.addTab(tab);
-        }
+        bottomNav = (BottomNavigationView) findViewById(R.id.bottom_nav);
+        bottomNav.setOnItemSelectedListener(item -> {
+            selectSection(positionForItemId(item.getItemId()));
+            return true;
+        });
 
+        // The History section is hidden entirely when history recording is off.
+        bottomNav.getMenu().findItem(R.id.nav_history).setVisible(app.recordHistory());
+
+        // The activity is windowSoftInputMode=adjustNothing (see the manifest):
+        // when the keyboard opens for a lookup it simply draws over the bottom of
+        // the window, leaving the nav bar pinned at the bottom (covered, not
+        // floating above the keyboard) and the results list at full height. All
+        // text inputs (the Lookup box, the list filter) live in the top Toolbar,
+        // so nothing that needs to stay visible is ever covered.
+
+        int initial;
         if (savedInstanceState != null) {
-            onRestoreInstanceState(savedInstanceState);
+            initial = savedInstanceState.getInt(STATE_SELECTED, LOOKUP);
+        } else if (app.dictionaries.size() == 0) {
+            initial = DICTIONARIES;
         } else {
-            if (app.dictionaries.size() == 0) {
-                viewPager.setCurrentItem(3);
+            initial = getPreferences(MODE_PRIVATE).getInt(PREF_LAST_SECTION, LOOKUP);
+        }
+        // Don't restore into the History section if history is (now) off.
+        if (!app.recordHistory() && initial == positionForItemId(R.id.nav_history)) {
+            initial = LOOKUP;
+        }
+        setupSections(initial);
+        updateNavIcons();
+        // Move the bar's own selection to match (fires the listener, which is a
+        // no-op for the already-current section).
+        bottomNav.setSelectedItemId(itemIdForPosition(initial));
+    }
+
+    // The bottom nav's FontDrawable icons don't respond to itemIconTint, so
+    // selection is shown by re-colouring them here: the current destination in
+    // colorPrimary, the rest muted.
+    private void updateNavIcons() {
+        Menu m = bottomNav.getMenu();
+        m.findItem(R.id.nav_lookup).setIcon(IconMaker.tab(this, IconMaker.IC_SEARCH, selectedPosition == 0));
+        m.findItem(R.id.nav_bookmarks).setIcon(IconMaker.tab(this, IconMaker.IC_BOOKMARK_O, selectedPosition == 1));
+        m.findItem(R.id.nav_history).setIcon(IconMaker.tab(this, IconMaker.IC_HISTORY, selectedPosition == 2));
+        m.findItem(R.id.nav_dictionaries).setIcon(IconMaker.tab(this, IconMaker.IC_DICTIONARY, selectedPosition == 3));
+        m.findItem(R.id.nav_settings).setIcon(IconMaker.tab(this, IconMaker.IC_SETTINGS, selectedPosition == 4));
+    }
+
+    // Show or hide the History section's bottom-nav entry. Called at startup
+    // from the record-history preference and when Settings toggles it. Nav
+    // positions are keyed by item id, not contiguous index, so hiding one entry
+    // leaves the others' positions untouched.
+    void setHistoryVisible(boolean visible) {
+        bottomNav.getMenu().findItem(R.id.nav_history).setVisible(visible);
+        if (!visible && selectedPosition == positionForItemId(R.id.nav_history)) {
+            bottomNav.setSelectedItemId(itemIdForPosition(LOOKUP));
+        }
+    }
+
+    // Add all five fragments (once) and show the initial one, hide the rest.
+    private void setupSections(int initial) {
+        FragmentManager fm = getSupportFragmentManager();
+        FragmentTransaction tx = fm.beginTransaction();
+        for (int i = 0; i < SECTION_TAGS.length; i++) {
+            Fragment f = fm.findFragmentByTag(SECTION_TAGS[i]);
+            if (f == null) {
+                f = createFragment(i);
+                tx.add(R.id.content, f, SECTION_TAGS[i]);
+            }
+            if (i == initial) {
+                tx.show(f);
+            } else {
+                tx.hide(f);
             }
         }
-
+        tx.commitNow();
+        selectedPosition = initial;
     }
 
+    private void selectSection(int position) {
+        if (position == selectedPosition) {
+            return;
+        }
+        FragmentManager fm = getSupportFragmentManager();
+        Fragment current = getFragment(selectedPosition);
+        Fragment next = getFragment(position);
+        FragmentTransaction tx = fm.beginTransaction();
+        if (current != null) {
+            tx.hide(current);
+        }
+        if (next != null) {
+            tx.show(next);
+        }
+        tx.commit();
+
+        // Leaving the previous section: close its selection CAB, and drop the
+        // soft keyboard if we're leaving Lookup.
+        if (current instanceof BaseListFragment) {
+            ((BaseListFragment) current).finishActionMode();
+        }
+        if (selectedPosition == LOOKUP) {
+            View focus = getCurrentFocus();
+            if (focus != null) {
+                InputMethodManager mgr = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                mgr.hideSoftInputFromWindow(focus.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
+            }
+        }
+        selectedPosition = position;
+        // Remember the section so the next launch reopens it (see PREF_LAST_SECTION).
+        getPreferences(MODE_PRIVATE).edit().putInt(PREF_LAST_SECTION, position).apply();
+        updateNavIcons();
+        // Refresh the title and the Lookup-only search box / dice button.
+        invalidateOptionsMenu();
+    }
+
+    private Fragment createFragment(int position) {
+        switch (position) {
+            case 0: return new LookupFragment();
+            case 1: return new BookmarksFragment();
+            case 2: return new HistoryFragment();
+            case 3: return new DictionariesFragment();
+            case 4: return new SettingsFragment();
+            default:
+                throw new IllegalArgumentException("Unexpected section " + position);
+        }
+    }
+
+    private Fragment getFragment(int position) {
+        return getSupportFragmentManager().findFragmentByTag(SECTION_TAGS[position]);
+    }
+
+    private int positionForItemId(int itemId) {
+        if (itemId == R.id.nav_bookmarks) return 1;
+        if (itemId == R.id.nav_history) return 2;
+        if (itemId == R.id.nav_dictionaries) return 3;
+        if (itemId == R.id.nav_settings) return 4;
+        return LOOKUP;
+    }
+
+    private int itemIdForPosition(int position) {
+        switch (position) {
+            case 1: return R.id.nav_bookmarks;
+            case 2: return R.id.nav_history;
+            case 3: return R.id.nav_dictionaries;
+            case 4: return R.id.nav_settings;
+            default: return R.id.nav_lookup;
+        }
+    }
+
+    Toolbar getToolbar() {
+        return (Toolbar) findViewById(R.id.toolbar);
+    }
+
+    // Drives the title and the Lookup search box + dice button off the selected
+    // section. Hidden fragments don't contribute menu items, so the other
+    // sections' own menu items (filter/sort, add) are handled entirely by their
+    // fragments; only this activity-level chrome needs the selection here.
     @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        int currentSection = savedInstanceState.getInt("currentSection");
-        viewPager.setCurrentItem(currentSection);
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        boolean result = super.onPrepareOptionsMenu(menu);
+        boolean isLookup = selectedPosition == LOOKUP;
+        getSupportActionBar().setTitle(titles[selectedPosition]);
+        lookupField.setVisibility(isLookup ? View.VISIBLE : View.GONE);
+        btnRandomArticle.setVisibility(isLookup ? View.VISIBLE : View.GONE);
+        if (isLookup) {
+            revealLookup();
+        }
+        return result;
     }
+
+    // Runs whenever Lookup becomes the visible section - either via
+    // onPrepareOptionsMenu above, or (see onWindowFocusChanged) when the window
+    // regains focus with clipboard text waiting to auto-paste.
+    private void revealLookup() {
+        final Application app = (Application) getApplication();
+        if (app.autoPaste()) {
+            CharSequence clipboard = Clipboard.take(this);
+            if (clipboard != null) {
+                app.lookup(clipboard.toString(), false);
+            }
+        }
+        lookupField.setQuery(app.getLookupQuery(), true);
+        // Focus the Lookup box whenever the section becomes visible (app start or
+        // tab switch). With results already showing, just place the caret so they
+        // stay fully visible; with nothing to show yet, raise the keyboard too so
+        // the user can type straight away. Posted because on first show the box
+        // isn't laid out/attached yet (same reason the Filter defers its keyboard).
+        lookupField.post(() -> {
+            if (app.lastResult.size() > 0) {
+                lookupField.requestFocus();
+            } else {
+                lookupField.showKeyboard();
+            }
+        });
+    }
+
+    // The multi-select CAB (Bookmarks/History) is themed and positioned entirely
+    // by the theme's windowActionModeOverlay + actionModeStyle: AppCompat wraps the
+    // native ActionMode, draws its (opaque, colorPrimary) bar over this Toolbar's
+    // spot, and reveals the Toolbar again on exit. The text-selection popup a
+    // long-press in the Lookup field triggers is a framework floating mode
+    // AppCompat leaves alone, so it doesn't interfere either.
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putInt("currentSection", viewPager.getCurrentItem());
+        outState.putInt(STATE_SELECTED, selectedPosition);
     }
 
     @Override
-    public void onTabUnselected(ActionBar.Tab tab,
-            FragmentTransaction fragmentTransaction) {
-        Fragment frag = appSectionsPagerAdapter.getItem(tab.getPosition());
-        if (frag instanceof BaseListFragment) {
-            ((BaseListFragment)frag).finishActionMode();
-        }
-        if (tab.getPosition() == 0) {
-            View v = this.getCurrentFocus();
-            if (v != null){
-                InputMethodManager mgr = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
-                mgr.hideSoftInputFromWindow(v.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
-            }
-        }
+    protected void onDestroy() {
+        lookupTimer.cancel();
+        super.onDestroy();
     }
 
     @Override
-    public void onTabSelected(ActionBar.Tab tab,
-            FragmentTransaction fragmentTransaction) {
-        viewPager.setCurrentItem(tab.getPosition());
-    }
-
-    @Override
-    public void onTabReselected(ActionBar.Tab tab,
-            FragmentTransaction fragmentTransaction) {
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                Application app = (Application)getApplication();
-                Slob.Blob blob = app.random();
-                if (blob == null) {
-                    Toast.makeText(this,
-                            R.string.article_collection_nothing_found,
-                            Toast.LENGTH_SHORT).show();
-                    return true;
-                }
-                Intent intent = new Intent(this,
-                        ArticleCollectionActivity.class);
-                intent.setData(Uri.parse(app.getUrl(blob)));
-                startActivity(intent);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+    protected void onResume() {
+        super.onResume();
+        // Coming back to the app on the Lookup section - e.g. Back from an article
+        // opened via the dice - re-runs the reveal so the box is focused and the
+        // keyboard returns when there are no results (onPause hid it). On a tab
+        // switch this is driven by onPrepareOptionsMenu instead, which doesn't
+        // re-fire on a plain resume.
+        if (selectedPosition == LOOKUP) {
+            revealLookup();
         }
     }
 
@@ -174,22 +399,6 @@ public class MainActivity extends FragmentActivity implements
         super.onPause();
     }
 
-    @Override
-    public void onBackPressed() {
-        int currentItem = viewPager.getCurrentItem();
-        Fragment frag = appSectionsPagerAdapter.getItem(currentItem);
-        Log.d(TAG, "current tab: " + currentItem);
-        if (frag instanceof BlobDescriptorListFragment) {
-            BlobDescriptorListFragment bdFrag = (BlobDescriptorListFragment)frag;
-            if (bdFrag.isFilterExpanded()) {
-                Log.d(TAG, "Filter is expanded");
-                bdFrag.collapseFilter();
-                return;
-            }
-        }
-        super.onBackPressed();
-    }
-
     public static final class BookmarksFragment extends
             BlobDescriptorListFragment {
         @Override
@@ -204,8 +413,8 @@ public class MainActivity extends FragmentActivity implements
         }
 
         @Override
-        char getEmptyIcon() {
-            return IconMaker.IC_BOOKMARK;
+        IconMaker.Glyph getEmptyIcon() {
+            return IconMaker.IC_BOOKMARK_O;
         }
 
         @Override
@@ -238,7 +447,7 @@ public class MainActivity extends FragmentActivity implements
         }
 
         @Override
-        char getEmptyIcon() {
+        IconMaker.Glyph getEmptyIcon() {
             return IconMaker.IC_HISTORY;
         }
 
@@ -259,41 +468,6 @@ public class MainActivity extends FragmentActivity implements
 
     }
 
-    public static class AppSectionsPagerAdapter extends FragmentPagerAdapter {
-        private Fragment[]         fragments;
-        LookupFragment             tabLookup;
-        BlobDescriptorListFragment tabBookmarks;
-        BlobDescriptorListFragment tabHistory;
-        DictionariesFragment       tabDictionaries;
-        SettingsFragment           tabSettings;
-
-        public AppSectionsPagerAdapter(FragmentManager fm) {
-            super(fm);
-            tabLookup = new LookupFragment();
-            tabBookmarks = new BookmarksFragment();
-            tabHistory = new HistoryFragment();
-            tabDictionaries = new DictionariesFragment();
-            tabSettings = new SettingsFragment();
-            fragments = new Fragment[] { tabLookup, tabBookmarks, tabHistory,
-                    tabDictionaries, tabSettings };
-        }
-
-        @Override
-        public Fragment getItem(int i) {
-            return fragments[i];
-        }
-
-        @Override
-        public int getCount() {
-            return fragments.length;
-        }
-
-        @Override
-        public CharSequence getPageTitle(int position) {
-            return "";
-        }
-    }
-
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         if (!autoPaste()) {
@@ -306,8 +480,8 @@ public class MainActivity extends FragmentActivity implements
         }
         CharSequence text = Clipboard.peek(this);
         if (text != null) {
-            viewPager.setCurrentItem(0);
-            invalidateOptionsMenu();
+            bottomNav.setSelectedItemId(R.id.nav_lookup);
+            revealLookup();
         }
     }
 
@@ -321,53 +495,54 @@ public class MainActivity extends FragmentActivity implements
         return app.autoPaste();
     }
 
-    @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-
-        if (event.isCanceled()) {
-            return true;
+    // Next section in the given direction (+1 down, -1 up), wrapping and skipping
+    // entries whose bottom-nav item is hidden (History when "Record history" is
+    // off). setSelectedItemId only checks isEnabled(), not isVisible(), so without
+    // this, volume cycling would select the hidden History section. Returns the
+    // starting position if nothing else is visible.
+    private int nextVisiblePosition(int from, int dir) {
+        int n = SECTION_TAGS.length;
+        Menu menu = bottomNav.getMenu();
+        for (int i = 1; i <= n; i++) {
+            int pos = ((from + dir * i) % n + n) % n;
+            if (menu.findItem(itemIdForPosition(pos)).isVisible()) {
+                return pos;
+            }
         }
-
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            if (!useVolumeForNav()) {
-                return false;
-            }
-            int current = viewPager.getCurrentItem();
-            if (current > 0) {
-                viewPager.setCurrentItem(current - 1);
-            }
-            else {
-                viewPager.setCurrentItem(appSectionsPagerAdapter.getCount() - 1);
-            }
-            return true;
-        }
-
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            if (!useVolumeForNav()) {
-                return false;
-            }
-            int current = viewPager.getCurrentItem();
-            if (current < appSectionsPagerAdapter.getCount() - 1) {
-                viewPager.setCurrentItem(current + 1);
-            }
-            else {
-                viewPager.setCurrentItem(0);
-            }
-            return true;
-        }
-
-        return super.onKeyUp(keyCode, event);
+        return from;
     }
 
+    // Volume-key tab navigation acts on key-down (matching ArticleCollectionActivity)
+    // so pressing responds immediately and a stray key-up arriving from an article
+    // that just finished can't trigger an unexpected tab switch. Only the initial
+    // press (repeatCount 0) switches tabs; auto-repeats and key-up are swallowed.
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (!useVolumeForNav()) {
                 return false;
             }
+            if (event.getRepeatCount() == 0) {
+                int dir = keyCode == KeyEvent.KEYCODE_VOLUME_UP ? -1 : 1;
+                int next = nextVisiblePosition(selectedPosition, dir);
+                if (next != selectedPosition) {
+                    bottomNav.setSelectedItemId(itemIdForPosition(next));
+                }
+            }
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (!useVolumeForNav()) {
+                return false;
+            }
+            return true;
+        }
+        return super.onKeyUp(keyCode, event);
     }
 
 }

@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- The find-in-page field: our SearchField (icon + text + clear, thin
+     underline), hosted as the find ActionMode's custom view and themed to the
+     colorPrimary bar via ThemeOverlay.Aard2.Toolbar in FindActionModeCallback.
+     wrap_content height with a little vertical padding so it centres in the bar
+     with the underline off the bottom edge, matching Lookup and Filter. -->
+<itkach.aard2.SearchField
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/find_search"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    >
-    <EditText android:id="@+id/edit"
-        android:importantForAutofill="no"
-        android:layout_width="0dip"
-        android:layout_weight="1"
-        android:layout_height="wrap_content"
-        android:scrollHorizontally="true"
-        android:inputType="text"
-        android:hint="@string/find_hint"
-        android:imeOptions="actionDone|flagNoExtractUi|flagNoFullscreen"
-        android:layout_marginEnd="10dip"
-        android:layout_marginRight="10dip"
-        android:textColor="@android:color/white"
-        />
-</LinearLayout>
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp" />

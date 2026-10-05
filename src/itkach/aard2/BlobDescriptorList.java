@@ -16,9 +16,11 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import itkach.slob.Slob;
 
@@ -48,9 +50,15 @@ final class BlobDescriptorList extends AbstractList<BlobDescriptor> {
     private int                             maxSize;
     private RuleBasedCollator               filterCollator;
     private Handler                         handler;
+    // True from loadAsync() until its results are merged in on the main thread.
+    // Read on the main thread only (set false there too), so no synchronization.
+    private boolean                         loading;
+    // Actions waiting for the async load to finish (see whenLoaded). Main thread
+    // only, like loading itself.
+    private final List<Runnable>            loadedCallbacks = new ArrayList<>();
 
     BlobDescriptorList(Application app, DescriptorStore<BlobDescriptor> store) {
-        this(app, store, 100);
+        this(app, store, 1000);
     }
 
     BlobDescriptorList(Application app, DescriptorStore<BlobDescriptor> store, int maxSize) {
@@ -146,9 +154,69 @@ final class BlobDescriptorList extends AbstractList<BlobDescriptor> {
         this.dataSetObservable.notifyInvalidated();
     }
 
-    void load() {
-        this.list.addAll(this.store.load(BlobDescriptor.class));
+    boolean isLoading() {
+        return loading;
+    }
+
+    // Run action once this list's entries are available: immediately if the
+    // async load has already finished (or was never started), otherwise right
+    // after loadAsync merges them in. Lets a caller that needs a populated list
+    // - opening a bookmarks/history article, resolving the bookmark icon - avoid
+    // acting on the still-empty list during a cold start. Main thread only.
+    void whenLoaded(Runnable action) {
+        if (loading) {
+            loadedCallbacks.add(action);
+        } else {
+            action.run();
+        }
+    }
+
+    // Load descriptors off the main thread. Reading and deserializing them from
+    // disk can be slow (history fills to maxSize = 1000 entries), enough to drag
+    // out cold start if done on it. isLoading() stays true from here until the
+    // results are merged in on the main thread; observers are notified at both
+    // ends, so a list fragment can show its spinner meanwhile.
+    // notifyDataSetChanged rebuilds and re-sorts the filtered view, so the merged
+    // items land in the fragment's current sort order.
+    void loadAsync() {
+        loading = true;
         notifyDataSetChanged();
+        Util.runAsync(() -> store.load(BlobDescriptor.class), loaded -> {
+            // Merge rather than addAll. An entry the user created while this was
+            // loading - e.g. opening or bookmarking an article reached straight
+            // from a link before the load finished - is already in the list, and
+            // add() couldn't dedupe against it (it wasn't loaded yet), so it also
+            // wrote its own store file. Keep that fresh copy and drop the stale
+            // duplicate now read from disk. equals()/hashCode() are by article
+            // identity, not the per-entry store id, so the set matches across the
+            // two files (and catches any pre-existing duplicate files too).
+            // Membership is via a HashSet: with up to maxSize entries a contains()
+            // scan per loaded item would be quadratic. All of this runs on the
+            // main thread, as do all list mutations, so the list is never touched
+            // concurrently - the background task only reads the store.
+            Set<BlobDescriptor> seen = new HashSet<>(list);
+            for (BlobDescriptor bd : loaded) {
+                if (seen.add(bd)) {
+                    list.add(bd);
+                } else {
+                    store.delete(bd.id);
+                }
+            }
+            // The disk load plus any entries added while it was in flight can put
+            // the list over the cap; trim back rather than leaving it to grow by
+            // one on every such cold start.
+            enforceMaxSize();
+            loading = false;
+            notifyDataSetChanged();
+            // Drain a copy: a callback may itself call whenLoaded, and with
+            // loading now false that reentrant one runs immediately rather than
+            // re-queuing, so this list won't be mutated mid-iteration.
+            List<Runnable> callbacks = new ArrayList<>(loadedCallbacks);
+            loadedCallbacks.clear();
+            for (Runnable action : callbacks) {
+                action.run();
+            }
+        });
     }
 
     private void doUpdateLastAccess(BlobDescriptor bd) {
@@ -236,13 +304,24 @@ final class BlobDescriptorList extends AbstractList<BlobDescriptor> {
         }
         this.list.add(bd);
         store.save(bd);
-        if (this.list.size() > this.maxSize) {
-            Util.sort(this.list, lastAccessComparator);
+        enforceMaxSize();
+        notifyDataSetChanged();
+        return bd;
+    }
+
+    // Evict least-recently-accessed entries until the list is back within maxSize.
+    // add() overshoots by one at a time; a merge (loadAsync) can overshoot by many
+    // when entries were added while the disk load was in flight - so loop, sorting
+    // once, rather than dropping a single entry.
+    private void enforceMaxSize() {
+        if (this.list.size() <= this.maxSize) {
+            return;
+        }
+        Util.sort(this.list, lastAccessComparator);
+        while (this.list.size() > this.maxSize) {
             BlobDescriptor lru = this.list.remove(this.list.size() - 1);
             store.delete(lru.id);
         }
-        notifyDataSetChanged();
-        return bd;
     }
 
     public BlobDescriptor remove(String contentUrl) {
@@ -263,6 +342,15 @@ final class BlobDescriptorList extends AbstractList<BlobDescriptor> {
         return null;
     }
 
+    // Re-insert a descriptor removed via remove(int) - the undo of a swipe-remove.
+    // Keeps the original object (and its timestamp), so it re-sorts back into its
+    // natural place rather than jumping to the top like a fresh add would.
+    public void restore(BlobDescriptor bd) {
+        this.list.add(bd);
+        store.save(bd);
+        notifyDataSetChanged();
+    }
+
     private BlobDescriptor removeByIndex(int index) {
         BlobDescriptor bd = this.list.remove(index);
         if (bd != null) {
@@ -273,6 +361,23 @@ final class BlobDescriptorList extends AbstractList<BlobDescriptor> {
             }
         }
         return bd;
+    }
+
+    // Delete every entry, from both the in-memory list and the backing store.
+    // Used when history recording is turned off.
+    public void clear() {
+        for (BlobDescriptor bd : this.list) {
+            store.delete(bd.id);
+        }
+        this.list.clear();
+        notifyDataSetChanged();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        // The true count, independent of any active filter (AbstractList's
+        // default isEmpty() reflects the filtered view - size() below).
+        return this.list.isEmpty();
     }
 
     public boolean contains(String contentUrl) {

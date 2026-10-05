@@ -6,7 +6,6 @@
     <string name="subtitle_bookmark">Bokmerker</string>
     <string name="subtitle_history">Historikk</string>
     <string name="subtitle_dictionaries">Ordlister</string>
-    <string name="action_find_dictionaries">Finn ordlister</string>
     <string name="action_find_in_page">Finn på side</string>
     <string name="action_bookmark_article">Bokmerk</string>
     <string name="action_filter">Filtrer</string>
@@ -29,9 +28,6 @@
         <item quantity="other">%,d elementer</item>
     </plurals>
 
-    <string name="action_zoom_out">Forminsk</string>
-    <string name="action_zoom_in">Forstørr</string>
-    <string name="action_zoom_reset">Tilbakestill forstørrelsesnivå</string>
     <string name="action_select_style">Stil…</string>
     <string name="select_style">Velg stil</string>
     <string name="default_style_title">Forvalg</string>
@@ -40,21 +36,13 @@
     <string name="setting_remote_content_wifi">Bare på Wi-Fi</string>
     <string name="setting_remote_content_never">Aldri</string>
     <string name="setting_remote_content">Last inn innhold fra annensteds hen</string>
-    <string name="setting_about">Om %1$s</string>
+    <string name="setting_about_section">Om</string>
     <string name="application_license_name">GNU General Public Lisens v3</string>
-    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
 
     <string name="application_version">Versjon %1$s</string>
-    <string name="setting_clear_cache">Tøm hurtiglager</string>
-    <string name="setting_clear_cache_subtitle">Tøm hurtiglagerinnhold, inkludert bilder fra annensteds hen</string>
-    <string name="confirm_clear_cached_content">Tøm hurtiglagret innhold?</string>
     <string name="article_collection_nothing_found">Fant ikke noe</string>
     <string name="article_collection_selected_not_available">Valgt artikkel er ikke tilgjengelig</string>
     <string name="article_collection_nothing_to_lookup">Ingenting å slå opp</string>
-    <string name="article_view_msg_not_found">Ikke funnet</string>
-    <string name="dictionaries_please_wait">Vent</string>
-    <string name="dictionaries_scanning_device">Skanner enhet for ordlister…</string>
-    <string name="dictionaries_confirm_forget">Glem "%1$s"?</string>
     <string name="lookup_nothing_found">Fant ikke noe</string>
     <string name="main_empty_bookmarks">Ingen bokmerker</string>
     <string name="main_empty_history">Ingen historikk</string>
@@ -82,17 +70,9 @@
     <string name="msg_failed_to_read_file">Klarte ikke å lese fil</string>
     <string name="msg_file_too_big">Fila er for stor</string>
     <string name="setting_user_styles">Brukerstiler</string>
-    <string name="setting_user_styles_empty">Ingen stiler</string>
     <string name="msg_failed_to_store_user_style">Klarte ikke å lagre brukerstil</string>
     <string name="setting_user_style_confirm_forget">Glem %1$s?</string>
-    <string name="msg_file_not_css">Later ikke til å være ei CSS-fil</string>
     <string name="msg_no_activity_to_get_content">Ingen aktivitet er i stand til å åpne fila</string>
-    <string name="action_add_dictionaries">Legg til</string>
-    <string name="title_activity_file_select">Velg ordlistefil</string>
-    <string name="action_goto_parent_dir">Opp</string>
-    <string name="action_reload_directory">Les inn på nytt</string>
-    <string name="msg_dictionary_already_open">Allerede åpen</string>
-    <string name="msg_dictionary_added">La til ordliste fra %1$s</string>
     <string name="setting_fav_random_search">Bare bruk favorittordlister for tilfeldig oppslag</string>
     <string name="article_collection_invalid_link">Ugyldig lenke</string>
     <string name="setting_ui_theme">Brukergrensesnittstil</string>
@@ -100,7 +80,31 @@
     <string name="setting_ui_theme_dark">Mørk</string>
     <string name="action_load_remote_content">Last inn innhold fra annensteds hen</string>
     <string name="auto_style_title">Auto</string>
-    <string name="action_fullscreen">Fullskjerm</string>
     <string name="setting_use_volume_for_nav">Bruk lydstyrkeknapper for navigasjon</string>
+    <string name="setting_auto_fullscreen_landscape">Gå automatisk til fullskjerm i liggende modus</string>
 
+    <string name="setting_user_styles_add">Legg til</string>
+    <string name="dictionary_marked_for_random_content_desc">%s, merket for tilfeldig oppslag</string>
+    <string name="setting_record_history">Registrer historikk</string>
+    <string name="setting_record_history_off_title">Slå av historikk?</string>
+    <string name="setting_record_history_off_message">Den registrerte historikken din blir slettet.</string>
+    <string name="setting_record_history_off_confirm">Slå av</string>
+    <string name="action_clear_query">Tøm</string>
+    <string name="action_download_dictionaries">Last ned</string>
+    <string name="action_open_dictionaries">Åpne</string>
+    <string name="action_full_screen">Fullskjerm</string>
+    <string name="action_full_screen_exit">Avslutt fullskjerm</string>
+    <string name="action_random_article">Tilfeldig artikkel</string>
+    <string name="action_reset">Tilbakestill</string>
+    <string name="action_text_size">Tekststørrelse</string>
+    <string name="action_undo">Angre</string>
+    <string name="blob_descriptor_removed">«%1$s» fjernet</string>
+    <string name="dictionaries_closed">«%1$s» lukket</string>
+    <string name="dictionary_drag_handle">Dra for å endre rekkefølge</string>
+    <string name="dictionary_use_for_random">Bruk til tilfeldig oppslag</string>
+    <string name="find_hint">Søk på siden</string>
+    <string name="find_next">Neste</string>
+    <string name="find_previous">Forrige</string>
+    <string name="scroll_to_top">Rull til toppen</string>
+    <string name="setting_auto_paste">Lim inn automatisk fra utklippstavlen</string>
 </resources>

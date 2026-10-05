@@ -1,14 +1,136 @@
-<android.support.v4.view.ViewPager xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/pager"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/article_collection_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-    <android.support.v4.view.PagerTitleStrip android:id="@+id/pager_title_strip"
-        android:background="@android:drawable/divider_horizontal_dark"
+    <!-- Fixed header: the Toolbar, with AppBarLayout supplying the elevation
+         shadow that separates it from the article content below.
+         android:fitsSystemWindows="true" (on the AppBarLayout, NOT the
+         Toolbar) is what lets AppBarLayout capture the status bar inset into
+         its own lastInsets and reserve that space above the Toolbar - a plain
+         gap painted by its statusBarForeground (color set at runtime in
+         Application.applyStatusBarAppearance, which follows the DEVICE's dark
+         mode so it matches the system-drawn status bar icons rather than this
+         app's own light/dark preference). No manual top padding here: that
+         would double the reserved inset. -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:paddingTop="2dp"
-        android:paddingBottom="2dp" />
+        android:fitsSystemWindows="true">
 
-</android.support.v4.view.ViewPager>
+        <!-- In its own file so it can be re-inflated on rotation to rebuild the
+             action menu for the new width - see article_toolbar.xml and
+             ArticleCollectionActivity.rebuildToolbarForWidth(). -->
+        <include layout="@layout/article_toolbar" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Content area: the article pager plus a loading spinner overlaid on it.
+         The activity shows the spinner while the lookup resolves in the
+         background, then just flips visibility to the pager - no setContentView
+         swap, so nothing flashes through during the open transition. The spinner
+         is a ContentLoadingProgressBar so it doesn't even appear on fast
+         lookups. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Each page is an ArticleWebView whose content starts below the pager's
+             title strip purely by layout - no WebView padding or injected CSS -
+             so it works for every content type a WebView can display, not just
+             HTML. The swipe-title strip is a direct child of the ViewPager (the
+             only place PagerTitleStrip can live) and pins itself to the pager's
+             top. Hidden until the adapter is set (see ArticleCollectionActivity). -->
+        <androidx.viewpager.widget.ViewPager
+            android:id="@+id/pager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <androidx.viewpager.widget.PagerTitleStrip
+                android:id="@+id/pager_title_strip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:background="?attr/colorSurfaceVariant"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
+
+        </androidx.viewpager.widget.ViewPager>
+
+        <!-- Starts gone so ContentLoadingProgressBar's debounce actually works:
+             show() then only reveals it after a short delay, and hide() before
+             that delay cancels it - so a quick load never flashes the spinner,
+             and once shown it stays up a minimum time rather than sub-animating.
+             Without visibility="gone" the bar is on screen from inflation and
+             that debounce is defeated. -->
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/loading_progress"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:indeterminate="true" />
+
+        <!-- Scroll-to-top affordance for long articles. Overlaid bottom-right on
+             the article content; starts hidden (alpha 0 / gone) and is faded in
+             by the activity only while a scroll has been running for a moment
+             (so a flick in a long article shows it, a tap or short scroll does
+             not), then faded out shortly after scrolling stops. Kept semi-
+             transparent so it doesn't obscure the text underneath. -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/scroll_top_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:visibility="gone"
+            android:alpha="0"
+            android:contentDescription="@string/scroll_to_top"
+            app:fabCustomSize="36dp"
+            app:maxImageSize="20dp"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Aard2.Fab"
+            app:elevation="3dp" />
+
+        <!-- Exit-full-screen affordance. In full-screen mode the toolbar (and
+             thus the overflow menu) is hidden, so this semi-transparent button is
+             the way back out - avoiding a reliance on a swipe-down gesture, which
+             would clash with pulling down the notification shade. Bottom-left, to
+             stay clear of the pager title strip (top) and the scroll-to-top
+             button (bottom-right). Hidden except while full-screen is active, and
+             it fades out on its own after a moment, reappearing on a screen touch. -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/exit_full_screen_fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="16dp"
+            android:visibility="gone"
+            android:alpha="0"
+            android:contentDescription="@string/action_full_screen_exit"
+            app:fabCustomSize="36dp"
+            app:maxImageSize="20dp"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Aard2.Fab"
+            app:elevation="3dp" />
+
+    </FrameLayout>
+
+    <!-- Bottom-edge strip filling the navigation-bar inset (height set at runtime
+         in applyContentInsets). Painted with the same neutral status-bar scrim as
+         the top, once - so the two system-bar edges match and nothing changes
+         during a swipe. A dedicated view rather than padding the WebView into the
+         inset, which janks WebView scrolling on some builds. -->
+    <View
+        android:id="@+id/bottom_edge"
+        android:layout_width="match_parent"
+        android:layout_height="0dp" />
+
+</LinearLayout>

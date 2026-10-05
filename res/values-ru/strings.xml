@@ -6,7 +6,6 @@
     <string name="subtitle_history">История</string>
     <string name="subtitle_dictionaries">Словари</string>
 
-    <string name="action_find_dictionaries">Искать словари</string>
     <string name="action_find_in_page">Поиск на странице</string>
     <string name="action_bookmark_article">Закладка</string>
     <string name="action_filter">Фильтр</string>
@@ -24,9 +23,6 @@
         <item quantity="many">%,d статей</item>
     </plurals>
 
-    <string name="action_zoom_out">Уменьшить</string>
-    <string name="action_zoom_in">Увеличить</string>
-    <string name="action_zoom_reset">Сброс масштаба</string>
     <string name="action_select_style">Стиль...</string>
     <string name="select_style">Выбрать стиль</string>
     <string name="default_style_title">По умолчанию</string>
@@ -35,18 +31,11 @@
     <string name="setting_remote_content_wifi">Только по Wi-Fi</string>
     <string name="setting_remote_content_never">Никогда</string>
     <string name="setting_remote_content">Загружать удалённый контент</string>
-    <string name="setting_about">О %1$s</string>
+    <string name="setting_about_section">О программе</string>
     <string name="application_version">Версия %1$s</string>
-    <string name="setting_clear_cache">Очистка кэша</string>
-    <string name="setting_clear_cache_subtitle">Удалить кэшированный контент, включая загруженные изображения</string>
-    <string name="confirm_clear_cached_content">Очистить содержимое кэша?</string>
     <string name="article_collection_nothing_found">Ничего не найдено</string>
     <string name="article_collection_selected_not_available">Выбранная статья недоступна</string>
     <string name="article_collection_nothing_to_lookup">Не указано что искать</string>
-    <string name="article_view_msg_not_found">Ресурс не найден</string>
-    <string name="dictionaries_please_wait">Подождите</string>
-    <string name="dictionaries_scanning_device">Идёт поиск словарей на устройстве...</string>
-    <string name="dictionaries_confirm_forget">Исключить %1$s?</string>
     <string name="lookup_nothing_found">Ничего не найдено</string>
     <string name="main_empty_bookmarks">Нет закладок</string>
     <string name="main_empty_history">Нет истории</string>
@@ -65,28 +54,43 @@
         <item quantity="many">%,d записей</item>
     </plurals>
     <string name="setting_user_style_confirm_forget">Исключить %1$s?</string>
-    <string name="action_goto_parent_dir">Вверх</string>
-    <string name="action_reload_directory">Перезагрузить</string>
     <string name="blob_descriptor_confirm_delete">Удалить %1$s?</string>
-    <string name="msg_dictionary_added">Добавлен словарь из файла %1$s</string>
-    <string name="msg_dictionary_already_open">Словарь уже открыт</string>
     <string name="msg_failed_to_read_file">Не удалось прочитать файл</string>
     <string name="msg_failed_to_store_user_style">Не удалось сохранить пользовательский стиль</string>
-    <string name="msg_file_not_css">Это не CSS файл</string>
     <string name="msg_file_too_big">Слишком большой файл</string>
     <string name="msg_no_activity_to_get_content">Нечем открыть файл</string>
     <string name="setting_user_styles">Стили пользователя</string>
-    <string name="setting_user_styles_empty">Нет стилей</string>
-    <string name="title_activity_file_select">Выберите файл словаря</string>
-    <string name="action_add_dictionaries">Добавить</string>
     <string name="setting_fav_random_search">Использовать только избранные словари для случайного поиска</string>
     <string name="setting_ui_theme">Интерфейс</string>
     <string name="setting_ui_theme_dark">Тёмный</string>
     <string name="setting_ui_theme_light">Светлый</string>
     <string name="article_collection_invalid_link">Некорректная ссылка</string>
     <string name="action_load_remote_content">Загрузить удалённый контент</string>
-    <string name="action_fullscreen">Весь экран</string>
     <string name="setting_use_volume_for_nav">Использовать кнопки громкости для навигации</string>
+    <string name="setting_auto_fullscreen_landscape">Автоматически переходить в полноэкранный режим в альбомной ориентации</string>
     <string name="find_hint">Поиск на странице</string>
     <string name="setting_auto_paste">Авто-вставка из буфера обмена</string>
+    <string name="setting_user_styles_add">Добавить</string>
+    <string name="dictionary_marked_for_random_content_desc">%s, отмечен для случайного поиска</string>
+    <string name="setting_record_history">Записывать историю</string>
+    <string name="setting_record_history_off_title">Отключить историю?</string>
+    <string name="setting_record_history_off_message">Записанная история будет удалена.</string>
+    <string name="setting_record_history_off_confirm">Отключить</string>
+    <string name="action_clear_query">Очистить</string>
+    <string name="action_download_dictionaries">Скачать</string>
+    <string name="action_open_dictionaries">Открыть</string>
+    <string name="action_full_screen">Полноэкранный режим</string>
+    <string name="action_full_screen_exit">Выйти из полноэкранного режима</string>
+    <string name="action_random_article">Случайная статья</string>
+    <string name="action_reset">Сбросить</string>
+    <string name="action_text_size">Размер текста</string>
+    <string name="action_undo">Отменить</string>
+    <string name="auto_style_title">Авто</string>
+    <string name="blob_descriptor_removed">Удалено «%1$s»</string>
+    <string name="dictionaries_closed">Закрыто «%1$s»</string>
+    <string name="dictionary_drag_handle">Перетащите для изменения порядка</string>
+    <string name="dictionary_use_for_random">Использовать для случайного поиска</string>
+    <string name="find_next">Следующее</string>
+    <string name="find_previous">Предыдущее</string>
+    <string name="scroll_to_top">Прокрутить вверх</string>
 </resources>

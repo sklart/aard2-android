@@ -6,7 +6,6 @@
     <string name="subtitle_bookmark">Marcadores</string>
     <string name="subtitle_history">Histórico</string>
     <string name="subtitle_dictionaries">Dicionários</string>
-    <string name="action_find_dictionaries">Procurar dicionários</string>
     <string name="action_find_in_page">Localizar na página</string>
     <string name="action_bookmark_article">Adicionar aos marcadores</string>
     <string name="action_filter">Filtro</string>
@@ -29,9 +28,6 @@
         <item quantity="other">%,d itens</item>
     </plurals>
 
-    <string name="action_zoom_out">Reduzir</string>
-    <string name="action_zoom_in">Ampliar</string>
-    <string name="action_zoom_reset">Repor ampliação</string>
     <string name="action_select_style">Tema…</string>
     <string name="select_style">Selecione tema</string>
     <string name="default_style_title">Padrão</string>
@@ -40,20 +36,12 @@
     <string name="setting_remote_content_wifi">Apenas via Wi-Fi</string>
     <string name="setting_remote_content_never">Nunca</string>
     <string name="setting_remote_content">Carregar conteúdo da web</string>
-    <string name="setting_about">Sobre %1$s</string>
+    <string name="setting_about_section">Sobre</string>
     <string name="application_license_name">GNU General Public License v3</string>
-    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
     <string name="application_version">Versão %1$s</string>
-    <string name="setting_clear_cache">Limpar cache</string>
-    <string name="setting_clear_cache_subtitle">Elimina o conteúdo do cache incluindo imagens transferidas da web</string>
-    <string name="confirm_clear_cached_content">Limpar o conteúdo do cache?</string>
     <string name="article_collection_nothing_found">Nenhum resultado</string>
     <string name="article_collection_selected_not_available">O artigo selecionado não está disponível</string>
     <string name="article_collection_nothing_to_lookup">Nada para pesquisar</string>
-    <string name="article_view_msg_not_found">Não encontrado</string>
-    <string name="dictionaries_please_wait">Por favor aguarde</string>
-    <string name="dictionaries_scanning_device">Procurando dicionários no dispositivo…</string>
-    <string name="dictionaries_confirm_forget">Esquecer "%1$s"?</string>
     <string name="lookup_nothing_found">Sem resultados</string>
     <string name="main_empty_bookmarks">Sem marcadores</string>
     <string name="main_empty_history">Sem histórico</string>
@@ -81,17 +69,9 @@
     <string name="msg_failed_to_read_file">Erro na leitura do arquivo</string>
     <string name="msg_file_too_big">Arquivo muito grande</string>
     <string name="setting_user_styles">Temas do usuário</string>
-    <string name="setting_user_styles_empty">Sem temas</string>
     <string name="msg_failed_to_store_user_style">Erro ao salvar tema do usuário</string>
     <string name="setting_user_style_confirm_forget">Esquecer %1$s?</string>
-    <string name="msg_file_not_css">Não aparenta ser um arquivo CSS</string>
     <string name="msg_no_activity_to_get_content">Nenhuma atividade está disponível para abrir o arquivo</string>
-    <string name="action_add_dictionaries">Adicionar</string>
-    <string name="title_activity_file_select">Selecionar arquivo de dicionário</string>
-    <string name="action_goto_parent_dir">Cima</string>
-    <string name="action_reload_directory">Recarregar</string>
-    <string name="msg_dictionary_already_open">Já aberto</string>
-    <string name="msg_dictionary_added">Adicionado dicionário de %1$s</string>
     <string name="setting_fav_random_search">Usar apenas dicionários favoritos nas pesquisas</string>
     <string name="article_collection_invalid_link">Link inválido</string>
     <string name="setting_ui_theme">Tema da interface do usuário</string>
@@ -99,7 +79,31 @@
     <string name="setting_ui_theme_dark">Escuro</string>
     <string name="action_load_remote_content">Carregar conteúdo da web</string>
     <string name="auto_style_title">Automático</string>
-    <string name="action_fullscreen">Tela inteira</string>
     <string name="setting_use_volume_for_nav">Usar botões de volume para navegação</string>
+    <string name="setting_auto_fullscreen_landscape">Entrar automaticamente em tela cheia no modo paisagem</string>
 
+    <string name="setting_user_styles_add">Adicionar</string>
+    <string name="dictionary_marked_for_random_content_desc">%s, marcado para consulta aleatória</string>
+    <string name="setting_record_history">Registrar histórico</string>
+    <string name="setting_record_history_off_title">Desativar histórico?</string>
+    <string name="setting_record_history_off_message">Seu histórico registrado será excluído.</string>
+    <string name="setting_record_history_off_confirm">Desativar</string>
+    <string name="action_clear_query">Limpar</string>
+    <string name="action_download_dictionaries">Baixar</string>
+    <string name="action_open_dictionaries">Abrir</string>
+    <string name="action_full_screen">Tela cheia</string>
+    <string name="action_full_screen_exit">Sair da tela cheia</string>
+    <string name="action_random_article">Artigo aleatório</string>
+    <string name="action_reset">Redefinir</string>
+    <string name="action_text_size">Tamanho do texto</string>
+    <string name="action_undo">Desfazer</string>
+    <string name="blob_descriptor_removed">“%1$s” removido</string>
+    <string name="dictionaries_closed">“%1$s” fechado</string>
+    <string name="dictionary_drag_handle">Arraste para reordenar</string>
+    <string name="dictionary_use_for_random">Usar para busca aleatória</string>
+    <string name="find_hint">Buscar na página</string>
+    <string name="find_next">Próximo</string>
+    <string name="find_previous">Anterior</string>
+    <string name="scroll_to_top">Rolar para o topo</string>
+    <string name="setting_auto_paste">Colar automaticamente da área de transferência</string>
 </resources>

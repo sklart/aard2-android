@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App-wide themes, applied by Application.installTheme(). Parent must
+         be an AppCompat-descended theme (Material3 qualifies, same as
+         MaterialComponents before it): com.google.android.material.appbar.
+         AppBarLayout enforces via ThemeEnforcement that the active theme
+         resolves AppCompat-defined attributes (e.g. colorPrimary), throwing
+         IllegalArgumentException ("...requires your app theme to be
+         Theme.AppCompat...") otherwise - true regardless of windowActionBar,
+         and regardless of the Activity's Java class (this doesn't require
+         AppCompatActivity, only the theme resource matters). NoActionBar
+         parents already set windowActionBar=false/windowNoTitle=true, so no
+         manual overrides are needed - both activities host their own
+         Toolbar directly.
+
+         DynamicColors parents (bundled in the material library we already
+         depend on) supply every color role themselves: on Android 12+ from
+         the system's own Material You palette (derived from the user's
+         wallpaper, the same colors every other app on the device picks up),
+         and on older versions by falling back to Material 3's own baseline
+         palette - both via a plain theme-parent switch, no color values of
+         our own needed at all. -->
+    <!-- windowActionModeOverlay=true draws a contextual ActionMode (multi-select
+         bar, find-in-page) OVER the content's top instead of inserting it and
+         pushing everything down. That lets the Toolbar stay put, covered by the
+         bar, rather than being hidden for the ActionMode's duration to avoid a
+         stacked double bar - a hide/show that would desync from the ActionMode's
+         own enter/exit animation and shift the layout. Both activities are
+         AppCompatActivity and their ActionModes are AppCompat-wrapped, so they
+         read the unprefixed AppCompat attribute. -->
+    <!-- actionBarSize drives the contextual ActionMode bars' height (multi-select
+         and find-in-page). The main Toolbar sets its own @dimen/toolbar_height and
+         so ignores this, but the ActionMode bars don't - point both at the same
+         dimen so they match the slimmer Toolbar instead of the 56dp default. -->
+    <!-- statusBarColor / windowLightStatusBar give the launch "starting window"
+         (drawn before onCreate) a neutral, device-dark-aware status bar instead
+         of the Material3 default (colorPrimary-derived), which otherwise flashes
+         the toolbar colour up there until applyStatusBarAppearance paints its
+         runtime scrim. Both resolve through -night resources (see
+         res/values/status_bar.xml) so they follow the DEVICE's dark mode - the
+         same signal the runtime scrim uses - not this app's theme; identical to
+         the runtime result in every case, so no flash even when app theme and
+         device dark mode disagree. Same values in both themes on purpose: the
+         starting window is device-driven, not app-theme-driven. -->
+    <style name="Theme.Aard2" parent="@style/Theme.Material3.DynamicColors.Light.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:actionBarSize">@dimen/toolbar_height</item>
+        <item name="actionBarSize">@dimen/toolbar_height</item>
+        <!-- Give the contextual ActionMode bars (find-in-page, and the
+             Bookmarks/History multi-select) the main Toolbar's colorPrimary
+             background instead of Material3's default dark surface, so the bar
+             they overlay matches the app bar. Both activities are
+             AppCompatActivity, so their ActionModes are AppCompat-wrapped and
+             read these attributes. Material3's ActionMode style hardcodes its own
+             background, so overriding the actionModeBackground attr alone is
+             ignored - the style has to be replaced (see Widget.Aard2.ActionMode
+             for the content styling). -->
+        <item name="actionModeStyle">@style/Widget.Aard2.ActionMode</item>
+        <item name="actionModeCloseButtonStyle">@style/Widget.Aard2.ActionButton.CloseMode</item>
+        <item name="android:statusBarColor">@color/status_bar_scrim</item>
+        <item name="android:windowLightStatusBar">@bool/status_bar_light_appearance</item>
+        <!-- Give the API 31+ system splash its own icon (a high-res, padded logo
+             - see @drawable/ic_splash) instead of deriving one from the launcher
+             icon. The launcher icon's opaque background makes the splash draw it
+             in the large masked mode, which upscaled the 192px launcher raster
+             and softened it; a dedicated high-res, pre-padded icon stays sharp
+             and unclipped, and decouples the two. Ignored below API 31. -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+
+    <style name="Theme.Aard2.Dark" parent="@style/Theme.Material3.DynamicColors.Dark.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:actionBarSize">@dimen/toolbar_height</item>
+        <item name="actionBarSize">@dimen/toolbar_height</item>
+        <item name="actionModeStyle">@style/Widget.Aard2.ActionMode</item>
+        <item name="actionModeCloseButtonStyle">@style/Widget.Aard2.ActionButton.CloseMode</item>
+        <item name="android:statusBarColor">@color/status_bar_scrim</item>
+        <item name="android:windowLightStatusBar">@bool/status_bar_light_appearance</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+
+    <!-- Applied via android:theme on every <android.widget.Toolbar>. Its
+         title/subtitle already get colorOnPrimary directly
+         (titleTextColor/subtitleTextColor); this covers everything else
+         hosted in the Toolbar that derives its color from these framework/
+         MDC attributes instead - the overflow "⋮" icon and the up chevron
+         (colorControlNormal), and the search field's hint text and clear icon
+         (textColorSecondary/textColorHint/colorControlNormal) -
+         none of which otherwise have any reason to contrast with
+         colorPrimary. Uses ?attr/colorOnPrimary (not a literal color) so
+         one overlay works for both Theme.Aard2 and Theme.Aard2.Dark - it
+         resolves through to whichever is active. No parent: an
+         android:theme overlay merges on top of the ambient theme, so
+         anything not listed here still falls through unchanged. -->
+    <!-- Contextual ActionMode bars (find-in-page, and Bookmarks/History
+         multi-select), styled to match the Toolbar they overlay: colorPrimary
+         background (replacing Material3's hardcoded dark surface), a
+         colorOnPrimary close button, and a colorOnPrimary title so the
+         multi-select count reads on the blue bar. The find bar's own content -
+         the field and the up/down arrows - is themed in FindActionModeCallback;
+         the multi-select icons come from IconMaker.actionMode. -->
+    <style name="Widget.Aard2.ActionMode" parent="@style/Widget.Material3.ActionMode">
+        <item name="background">?attr/colorPrimary</item>
+        <item name="backgroundSplit">?attr/colorPrimary</item>
+        <item name="titleTextStyle">@style/TextAppearance.Aard2.ActionMode.Title</item>
+        <!-- Slimmer close button so the find field doesn't start far right of
+             where the Filter/Lookup fields do - see the layout. -->
+        <item name="closeItemLayout">@layout/aard2_action_mode_close_item</item>
+    </style>
+
+    <style name="TextAppearance.Aard2.ActionMode.Title" parent="@style/TextAppearance.Material3.ActionBar.Title">
+        <item name="android:textColor">?attr/colorOnPrimary</item>
+    </style>
+
+    <style name="Widget.Aard2.ActionButton.CloseMode" parent="@style/Widget.AppCompat.ActionButton.CloseMode">
+        <item name="tint">?attr/colorOnPrimary</item>
+        <item name="android:tint">?attr/colorOnPrimary</item>
+        <!-- 56dp, identical to the Toolbar's navigation button, so the centred
+             back arrow lands exactly where the Toolbar's up arrow does and never
+             shifts when find toggles in/out - not shrunk to tighten the gap before
+             the field, which would move the arrow off the Toolbar's position. -->
+        <item name="android:minWidth">56dp</item>
+    </style>
+
+    <style name="ThemeOverlay.Aard2.Toolbar" parent="@android:style/ThemeOverlay">
+        <item name="colorControlNormal">?attr/colorOnPrimary</item>
+        <item name="colorControlActivated">?attr/colorOnPrimary</item>
+        <item name="android:textColorPrimary">?attr/colorOnPrimary</item>
+        <item name="android:textColorSecondary">?attr/colorOnPrimary</item>
+        <item name="android:textColorHint">?attr/colorOnPrimary</item>
+    </style>
+
+    <!-- android:popupTheme merges on top of the Toolbar's own android:theme
+         overlay above (not the plain ambient activity theme), so an empty
+         overlay is a no-op and popup menu text would otherwise stay
+         colorOnPrimary (near-white) - illegible against the popup's own
+         colorSurface background. colorOnSurface is the correct semantic
+         role for text drawn on colorSurface. -->
+    <style name="ThemeOverlay.Aard2.ToolbarPopup" parent="@android:style/ThemeOverlay">
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- List-item text roles, on the Material 3 type scale so
+         size/weight/letter-spacing follow the active theme (and its dynamic
+         color). Titles inherit the type scale's own on-surface colour; the muted
+         subtitle/caption roles use colorOnSurfaceVariant, M3's role for
+         de-emphasised secondary text. Applied via style="...". -->
+    <style name="TextAppearance.Aard2.ListTitle" parent="@style/TextAppearance.Material3.TitleMedium" />
+
+    <style name="TextAppearance.Aard2.ListSubtitle" parent="@style/TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="TextAppearance.Aard2.ListCaption" parent="@style/TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Circular floating action buttons - the article view's scroll-to-top and
+         exit-full-screen buttons - overriding Material3's default rounded-square
+         FAB shape. -->
+    <style name="ShapeAppearanceOverlay.Aard2.Fab" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+</resources>

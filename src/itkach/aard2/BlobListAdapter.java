@@ -1,146 +1,107 @@
 package itkach.aard2;
 
-import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 import itkach.slob.Slob;
 
-public class BlobListAdapter extends BaseAdapter {
+// View-scoped RecyclerView adapter over an app-scoped BlobList. One is created
+// per consumer (the Lookup list, each article pager), each with its own click
+// listener, so the listener lives and dies with the view that owns it. Mirrors
+// BlobDescriptorListAdapter's relationship to BlobDescriptorList.
+public class BlobListAdapter extends RecyclerView.Adapter<BlobListAdapter.ViewHolder>
+        implements BlobSource, ReleasableAdapter {
 
-    private static final String TAG = BlobListAdapter.class.getSimpleName();
+    private final BlobList            list;
+    private final OnItemClickListener itemClickListener;
+    private final BlobList.Listener   listener;
 
-    Handler             mainHandler;
-    List<Slob.Blob>     list;
-    Iterator<Slob.Blob> iter;
-    ExecutorService     executor;
-
-    private final int   chunkSize;
-    private final int   loadMoreThreashold;
-    int                 MAX_SIZE   = 10000;
-
-
-    public BlobListAdapter(Context context) {
-        this(context, 20, 10);
+    BlobListAdapter(BlobList list) {
+        this(list, null);
     }
 
-    public BlobListAdapter(Context context, int chunkSize, int loadMoreThreashold) {
-        this.mainHandler = new Handler(context.getMainLooper());
-        this.executor = Executors.newSingleThreadExecutor();
-        this.list = new ArrayList<Slob.Blob>(chunkSize);
-        this.chunkSize = chunkSize;
-        this.loadMoreThreashold = loadMoreThreashold;
-    }
-
-    void setData(Iterator<Slob.Blob> lookupResultsIter) {
-        mainHandler.post(new Runnable() {
+    BlobListAdapter(BlobList list, OnItemClickListener itemClickListener) {
+        this.list = list;
+        this.itemClickListener = itemClickListener;
+        this.listener = new BlobList.Listener() {
             @Override
-            public void run() {
-                list.clear();
+            public void onReset() {
                 notifyDataSetChanged();
             }
-        });
-        this.iter = lookupResultsIter;
-        loadChunkSync();
+
+            @Override
+            public void onInserted(int positionStart, int itemCount) {
+                // Incremental, so a chunk loading mid-scroll appends rows without
+                // rebinding the visible ones (which stutters the list).
+                notifyItemRangeInserted(positionStart, itemCount);
+            }
+        };
+        this.list.registerListener(listener);
     }
 
-    private void loadChunkSync() {
-        long t0 = System.currentTimeMillis();
-        int count = 0;
-        final List<Slob.Blob> chunkList = new LinkedList<>();
+    // Detaches from the underlying BlobList. Call when the owning view goes away
+    // (e.g. LookupFragment.onDestroyView) so the app-scoped list stops holding
+    // this adapter - and, through its click listener, the Activity.
+    @Override
+    public void release() {
+        list.unregisterListener(listener);
+    }
 
-        while (iter.hasNext() && count < chunkSize
-                && list.size() <= MAX_SIZE) {
-            count++;
-            Slob.Blob b = iter.next();
-            chunkList.add(b);
-        }
-
-        mainHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                list.addAll(chunkList);
-                notifyDataSetChanged();
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.blob_descriptor_list_item, parent, false);
+        final ViewHolder holder = new ViewHolder(view);
+        view.setOnClickListener(v -> {
+            int position = holder.getBindingAdapterPosition();
+            if (itemClickListener != null && position != RecyclerView.NO_POSITION) {
+                itemClickListener.onItemClick(position);
             }
         });
-
-        Log.d(TAG,
-                String.format("Loaded chunk of %d (adapter size %d) in %d ms",
-                        count, list.size(), (System.currentTimeMillis() - t0)));
-    }
-
-    private void loadChunk() {
-        if (!iter.hasNext()) {
-            return;
-        }
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                loadChunkSync();
-            }
-        });
+        return holder;
     }
 
     @Override
-    public int getCount() {
-        return list == null ? 0 : list.size();
-    }
-
-    @Override
-    public Object getItem(int position) {
-        Object result = list.get(position);
-        maybeLoadMore(position);
-        return result;
-    }
-
-    @Override
-    public long getItemId(int position) {
-        return position;
-    }
-
-    private void maybeLoadMore(int position) {
-        if (position >= list.size() - loadMoreThreashold) {
-            loadChunk();
-        }
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Slob.Blob item = list.get(position);
         Slob slob = item.owner;
-        maybeLoadMore(position);
-
-        View view;
-        if (convertView != null) {
-            view = convertView;
-        } else {
-            LayoutInflater inflater = (LayoutInflater) parent.getContext()
-                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            view = inflater.inflate(R.layout.blob_descriptor_list_item, parent, false);
-        }
-
-        TextView titleView = (TextView)view.findViewById(R.id.blob_descriptor_key);
-        titleView.setText(item.key);
-        TextView sourceView = (TextView)view.findViewById(R.id.blob_descriptor_source);
-        sourceView.setText(slob == null ? "???" : slob.getTags().get("label"));
-        TextView timestampView = (TextView)view.findViewById(R.id.blob_descriptor_timestamp);
-        timestampView.setText("");
-        timestampView.setVisibility(View.GONE);
-        return view;
-
+        holder.title.setText(item.key);
+        holder.source.setText(slob == null ? "???" : slob.getTags().get("label"));
+        holder.timestamp.setText("");
+        holder.timestamp.setVisibility(View.GONE);
     }
 
+    @Override
+    public int getItemCount() {
+        return list.size();
+    }
+
+    @Override
+    public int getBlobCount() {
+        return list.size();
+    }
+
+    @Override
+    public Object getBlobItem(int position) {
+        return list.get(position);
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        final TextView title;
+        final TextView source;
+        final TextView timestamp;
+
+        ViewHolder(View itemView) {
+            super(itemView);
+            title = (TextView) itemView.findViewById(R.id.blob_descriptor_key);
+            source = (TextView) itemView.findViewById(R.id.blob_descriptor_source);
+            timestamp = (TextView) itemView.findViewById(R.id.blob_descriptor_timestamp);
+        }
+    }
 }

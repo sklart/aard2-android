@@ -1,11 +1,11 @@
 <itkach.aard2.CheckableRelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" 
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:paddingBottom="6dip"
         android:paddingLeft="8dip"
         android:paddingRight="8dip"
         android:paddingTop="3dip"
-        android:background="@android:drawable/list_selector_background"
+        android:background="@drawable/blob_list_item_background"
     >
     
     <LinearLayout
@@ -17,7 +17,7 @@
 
         <TextView
             android:id="@+id/blob_descriptor_key"
-            style="@android:style/TextAppearance.Holo.SearchResult.Title"
+            style="@style/TextAppearance.Aard2.ListTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginRight="22dp"
@@ -32,19 +32,17 @@
 
         <TextView
                 android:id="@+id/blob_descriptor_source"
-                style="@android:style/TextAppearance.Holo.SearchResult.Subtitle"
+                style="@style/TextAppearance.Aard2.ListSubtitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentLeft="true"
                 android:layout_weight="1"
                 android:text="WordNet" />
 
             <TextView
                 android:id="@+id/blob_descriptor_timestamp"
-                style="@android:style/TextAppearance.Holo.Small"
+                style="@style/TextAppearance.Aard2.ListCaption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"
                 android:paddingLeft="6dp"
                 android:text="1 day ago"
                 android:textStyle="italic" />

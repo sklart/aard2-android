@@ -6,7 +6,6 @@
     <string name="subtitle_bookmark">Bookmarks</string>
     <string name="subtitle_history">History</string>
     <string name="subtitle_dictionaries">Dictionaries</string>
-    <string name="action_find_dictionaries">Find Dictionaries</string>
     <string name="action_find_in_page">Find in page</string>
     <string name="action_bookmark_article">Bookmark</string>
     <string name="action_filter">Filter</string>
@@ -15,6 +14,7 @@
     <string name="action_sort_by_title">By Title</string>
     <string name="action_sort_by_time">By Time</string>
     <string name="action_lookup">Lookup</string>
+    <string name="action_random_article">Random article</string>
     <!--
     English only uses "one" and "other" for plurals.
     Other quantities are included as a fallback if some translation
@@ -29,9 +29,8 @@
         <item quantity="other">%,d items</item>
     </plurals>
 
-    <string name="action_zoom_out">Zoom Out</string>
-    <string name="action_zoom_in">Zoom In</string>
-    <string name="action_zoom_reset">Zoom Reset</string>
+    <string name="action_text_size">Text size</string>
+    <string name="action_reset">Reset</string>
     <string name="action_select_style">Style...</string>
     <string name="select_style">Select style</string>
     <string name="default_style_title">Default</string>
@@ -40,27 +39,25 @@
     <string name="setting_remote_content_wifi">When on Wi-Fi</string>
     <string name="setting_remote_content_never">Never</string>
     <string name="setting_remote_content">Load Remote Content</string>
-    <string name="setting_about">About %1$s</string>
+    <string name="setting_about_section">About</string>
     <string name="application_home_url" translatable="false">http://aarddict.org</string>
     <string name="application_copyright" translatable="false">Igor Tkach</string>
     <string name="application_license_name">GNU General Public License v3</string>
-    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
+    <string name="application_license_url" translatable="false">https://gnu.org/licenses/gpl.html</string>
     <string name="application_license" translatable="false">
         <![CDATA[
             <a href="%1$s">%2$s</a>
         ]]>
     </string>
     <string name="application_version">Version %1$s</string>
-    <string name="setting_clear_cache">Clear Cache</string>
-    <string name="setting_clear_cache_subtitle">Delete cached content including remote images</string>
-    <string name="confirm_clear_cached_content">Clear cached content?</string>
     <string name="article_collection_nothing_found">Nothing found</string>
     <string name="article_collection_selected_not_available">Selected article is not available</string>
     <string name="article_collection_nothing_to_lookup">Nothing to look up</string>
-    <string name="article_view_msg_not_found">Not found</string>
-    <string name="dictionaries_please_wait">Please wait</string>
-    <string name="dictionaries_scanning_device">Scanning device for dictionaries...</string>
-    <string name="dictionaries_confirm_forget">Forget "%1$s"?</string>
+    <string name="scroll_to_top">Scroll to top</string>
+    <string name="action_full_screen">Full screen</string>
+    <string name="action_full_screen_exit">Exit full screen</string>
+    <string name="dictionaries_closed">Closed "%1$s"</string>
+    <string name="action_undo">Undo</string>
     <string name="lookup_nothing_found">Nothing found</string>
     <string name="main_empty_bookmarks">No bookmarks</string>
     <string name="main_empty_history">No history</string>
@@ -85,30 +82,35 @@
     </plurals>
 
     <string name="blob_descriptor_confirm_delete">Delete %1$s?</string>
+    <string name="blob_descriptor_removed">Removed "%1$s"</string>
     <string name="msg_failed_to_read_file">Failed to read file</string>
     <string name="msg_file_too_big">File is too big</string>
     <string name="setting_user_styles">User Styles</string>
-    <string name="setting_user_styles_empty">No styles</string>
+    <string name="setting_user_styles_add">Add</string>
     <string name="msg_failed_to_store_user_style">Failed to store user style</string>
     <string name="setting_user_style_confirm_forget">Forget %1$s?</string>
-    <string name="msg_file_not_css">Doesn\'t appear to be a CSS file</string>
     <string name="msg_no_activity_to_get_content">No activity is available to open file</string>
-    <string name="action_add_dictionaries">Add</string>
-    <string name="title_activity_file_select">Select Dictionary File</string>
-    <string name="action_goto_parent_dir">Up</string>
-    <string name="action_reload_directory">Reload</string>
-    <string name="msg_dictionary_already_open">Already open</string>
-    <string name="msg_dictionary_added">Added dictionary from %1$s</string>
-    <string name="setting_fav_random_search">Use only favorite dictionaries for random lookup</string>
+    <string name="action_open_dictionaries">Open</string>
+    <string name="action_download_dictionaries">Download</string>
+    <string name="dictionaries_download_url" translatable="false">https://aarddict.org/dictionaries</string>
+    <string name="setting_fav_random_search">Use only marked dictionaries for random lookup</string>
+    <string name="dictionary_use_for_random">Use for random lookup</string>
+    <string name="dictionary_marked_for_random_content_desc">%s, marked for random lookup</string>
+    <string name="dictionary_drag_handle">Drag to reorder</string>
     <string name="article_collection_invalid_link">Invalid link</string>
     <string name="setting_ui_theme">User Interface Style</string>
     <string name="setting_ui_theme_light">Light</string>
     <string name="setting_ui_theme_dark">Dark</string>
     <string name="action_load_remote_content">Load Remote Content</string>
     <string name="auto_style_title">Auto</string>
-    <string name="action_fullscreen">Full Screen</string>
     <string name="setting_use_volume_for_nav">Use volume buttons for navigation</string>
+    <string name="setting_auto_fullscreen_landscape">Automatically go to full screen in landscape</string>
     <string name="setting_auto_paste">Auto-paste from clipboard</string>
+    <string name="setting_record_history">Record history</string>
+    <string name="setting_record_history_off_title">Turn off history?</string>
+    <string name="setting_record_history_off_message">Your recorded history will be deleted.</string>
+    <string name="setting_record_history_off_confirm">Turn off</string>
+    <string name="action_clear_query">Clear</string>
     <string name="find_hint">Find in page</string>
     <string name="find_next">Next</string>
     <string name="find_previous">Previous</string>

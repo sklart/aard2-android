@@ -1,115 +1,183 @@
 package itkach.aard2;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.Paint;
-import android.graphics.PixelFormat;
-import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
-import android.support.v4.content.ContextCompat;
+import androidx.core.content.ContextCompat;
 import android.util.TypedValue;
+
+import com.kazy.fontdrawable.FontDrawable;
 
 
 class IconMaker {
 
-    static final String CUSTOM_FONT_PATH = "fontawesome-4.2.0.ttf";
+    // Phosphor ships each weight (regular = outline, fill = filled, ...) as a
+    // separate font file, all sharing one codepoint per icon - so a Glyph
+    // carries which file it comes from, not just the character. Everything uses
+    // the outline (regular) weight; only the filled bookmark that marks a
+    // bookmarked article uses fill. Each asset is a subset built with fonttools
+    // (pyftsubset) holding just the glyphs used below, not Phosphor's full
+    // ~2000-icon set (that's why phosphor-regular.ttf is ~7KB and
+    // phosphor-fill.ttf under 1KB) - regenerate with ./d mk-phosphor, which
+    // documents the name-to-codepoint mapping. Codepoints are in Phosphor's
+    // private-use range (U+E000+), written as unicode char escapes since the
+    // glyphs don't render as source text.
+    private static final String FONT_REGULAR = "phosphor-regular.ttf";
+    private static final String FONT_FILL = "phosphor-fill.ttf";
 
-    static final char IC_SEARCH = '\uf002';
-    static final char IC_BOOKMARK = '\uf02e';
-    static final char IC_BOOKMARK_O = '\uf097';
-    static final char IC_HISTORY = '\uf1da';
-    static final char IC_DICTIONARY = '\uf02d';
-    static final char IC_SETTINGS = '\uf013';
-    static final char IC_RELOAD = '\uf021';
-    static final char IC_FILTER = '\uf0b0';
-    static final char IC_SORT_DESC = '\uf161';
-    static final char IC_SORT_ASC = '\uf160';
-    static final char IC_CLOCK = '\uf017';
-    static final char IC_LIST = '\uf03a';
-    static final char IC_TRASH = '\uf1f8';
-    static final char IC_LICENSE = '\uf19c';
-    static final char IC_EXTERNAL_LINK = '\uf08e';
-    static final char IC_FILE_ARCHIVE = '\uf1c6';
-    static final char IC_ERROR = '\uf071';
-    static final char IC_COPYRIGHT = '\uf1f9';
-    static final char IC_SELECT_ALL = '\uf046';
-    static final char IC_ADD = '\uf067';
-    static final char IC_ANGLE_UP = '\uf106';
-    static final char IC_ANGLE_DOWN = '\uf107';
-    static final char IC_STAR = '\uf005';
-    static final char IC_STAR_O = '\uf006';
-    static final char IC_FOLDER = '\uf07b';
-    static final char IC_LEVEL_UP = '\uf148';
-    static final char IC_BAN = '\uf05e';
-    static final char IC_FULLSCREEN = '\uf065';
-
-
-    static Drawable make(Context context, char c, int sizeDp, int color) {
-        return new IconDrawable(context, c, sizeDp, color);
+    static final class Glyph {
+        final char code;
+        final String font;
+        private Glyph(char code, String font) {
+            this.code = code;
+            this.font = font;
+        }
     }
 
-    static Drawable makeWithColorRes(Context context, char c, int sizeDp, int colorRes) {
-        return make(context, c, sizeDp, context.getResources().getColor(colorRes));
+    private static Glyph regular(char code) {
+        return new Glyph(code, FONT_REGULAR);
     }
 
-    static Drawable tab(Context context, char c) {
-        return makeWithColorRes(context, c, 21, R.color.tab_icon);
+    private static Glyph fill(char code) {
+        return new Glyph(code, FONT_FILL);
     }
 
-    static Drawable list(Context context, char c) {
-        return makeWithColorRes(context, c, 26, R.color.list_icon);
+    static final Glyph IC_SEARCH = regular('\ue30c');        // magnifying-glass
+    static final Glyph IC_BOOKMARK = fill('\ue0ea');         // bookmark-simple (filled)
+    static final Glyph IC_BOOKMARK_O = regular('\ue0ea');    // bookmark-simple (outline)
+    static final Glyph IC_HISTORY = regular('\ue1a0');       // clock-counter-clockwise
+    static final Glyph IC_DICTIONARY = regular('\ue0e2');    // book
+    static final Glyph IC_SETTINGS = regular('\ue270');      // gear
+    static final Glyph IC_FILTER = regular('\ue266');        // funnel
+    static final Glyph IC_SORT_DESC = regular('\ue446');     // sort-descending
+    static final Glyph IC_SORT_ASC = regular('\ue444');      // sort-ascending
+    static final Glyph IC_CLOCK = regular('\ue19a');         // clock
+    static final Glyph IC_SORT_NAME = regular('\ue6ee');     // text-aa (sort by title)
+    static final Glyph IC_TRASH = regular('\ue4a6');         // trash
+    static final Glyph IC_LICENSE = regular('\ue0b4');       // bank
+    static final Glyph IC_EXTERNAL_LINK = regular('\ue5de'); // arrow-square-out
+    static final Glyph IC_FILE = regular('\ue230');          // file
+    static final Glyph IC_ERROR = regular('\ue4e0');         // warning
+    static final Glyph IC_COPYRIGHT = regular('\ue54a');     // copyright
+    static final Glyph IC_CHECK_SQUARE = regular('\ue186');  // check-square (checked box)
+    static final Glyph IC_SQUARE = regular('\ue45e');        // square (empty box)
+    static final Glyph IC_ADD = regular('\ue3d4');           // plus
+    static final Glyph IC_ANGLE_UP = regular('\ue13c');      // caret-up
+    static final Glyph IC_ANGLE_DOWN = regular('\ue136');    // caret-down
+    static final Glyph IC_BAN = regular('\ue3de');           // prohibit
+    static final Glyph IC_RANDOM = regular('\ue1ee');        // dice-five
+    static final Glyph IC_DRAG_HANDLE = regular('\ueae2');   // dots-six-vertical (drag-to-reorder handle)
+    static final Glyph IC_COMPRESS = regular('\ue1ce');      // corners-in (exit full screen)
+    static final Glyph IC_EXPAND = regular('\ue1d0');        // corners-out (enter full screen)
+    static final Glyph IC_FOLDER_OPEN = regular('\ue256');   // folder-open (open dictionary file)
+    static final Glyph IC_CLOSE = regular('\ue4f6');         // x (close/remove dictionary)
+
+    static FontDrawable make(Context context, Glyph g, int sizeDp, int color) {
+        FontDrawable drawable = new FontDrawable.Builder(context, g.code, g.font)
+                .setSizeDp(sizeDp)
+                .setColor(color)
+                .build();
+        return drawable;
     }
 
-    static Drawable actionBar(Context context, char c) {
-        return makeWithColorRes(context, c, 26, R.color.actionbar_icon);
-    }
-
-    static Drawable text(Context context, char c) {
+    // Resolves a theme attribute (framework or library) to an actual color,
+    // so icon color follows the active theme (light/dark, or whatever brand
+    // color it's set to) instead of a color resource baked in ahead of time.
+    static int resolveThemeColor(Context context, int attrId, int fallbackColor) {
         TypedValue typedValue = new TypedValue();
-        boolean wasResolved = context.getTheme().resolveAttribute(android.R.attr.textColorSecondary, typedValue, true);
+        boolean wasResolved = context.getTheme().resolveAttribute(attrId, typedValue, true);
         if (wasResolved) {
-            int color = ContextCompat.getColor(context, typedValue.resourceId);
-            return make(context, c, 16, color);
+            return ContextCompat.getColor(context, typedValue.resourceId);
         }
-        return makeWithColorRes(context, c, 16, R.color.list_icon);
+        return fallbackColor;
     }
 
-    static Drawable errorText(Context context, char c) {
-        return makeWithColorRes(context, c, 16, android.R.color.holo_red_dark);
+    // Bottom-navigation icon. The selected destination is drawn in the brand
+    // colour (colorPrimary), the rest in the muted textColorSecondary (the
+    // framework's own "de-emphasized icon" role, which follows the theme and,
+    // on Android 12+, the system's per-wallpaper dynamic color). The colour is
+    // chosen here rather than via itemIconTint because the FontDrawable this
+    // produces doesn't honour a tint list. Size follows the bar's itemIconSize,
+    // so the glyph size passed to make() is just its intrinsic bound.
+    static FontDrawable tab(Context context, Glyph g, boolean selected) {
+        int attr = selected
+                ? androidx.appcompat.R.attr.colorPrimary
+                : android.R.attr.textColorSecondary;
+        int fallback = selected ? 0xff0099cc : 0xff888888;
+        return make(context, g, 24, resolveThemeColor(context, attr, fallback));
     }
 
-    static Drawable emptyView(Context context, char c) {
-        return makeWithColorRes(context, c, 52, R.color.empty_view_icon);
+    // Content-area accent icons - tied to the theme's brand color (colorPrimary)
+    // so they stay consistent with the rest of the UI instead of a separate
+    // hardcoded accent.
+    static FontDrawable list(Context context, Glyph g) {
+        int color = resolveThemeColor(context, androidx.appcompat.R.attr.colorPrimary, 0xff0099cc);
+        return make(context, g, 26, color);
     }
 
-    private static final class IconDrawable extends Drawable {
-        private final char icon;
-        private final Paint paint;
-        private final int sizePx;
+    // Secondary row actions (a dictionary row's forget/trash) - deliberately
+    // smaller and in the muted secondary text color so they recede behind the
+    // dictionary name and its on/off toggle rather than competing with them the
+    // way full-size colorPrimary list() icons do.
+    static FontDrawable rowAction(Context context, Glyph g) {
+        int color = resolveThemeColor(context, android.R.attr.textColorSecondary, 0xff888888);
+        return make(context, g, 18, color);
+    }
 
-        IconDrawable(Context context, char icon, int sizeDp, int color) {
-            this.icon = icon;
-            this.sizePx = (int) (sizeDp * context.getResources().getDisplayMetrics().density + 0.5f);
-            this.paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
-            this.paint.setTypeface(Typeface.createFromAsset(context.getAssets(), CUSTOM_FONT_PATH));
-            this.paint.setTextSize(sizePx);
-            this.paint.setColor(color);
-            this.paint.setTextAlign(Paint.Align.CENTER);
-        }
+    // The expand/collapse chevron is a passive disclosure affordance, not an
+    // action - smaller still and in the faint hint colour so it recedes further
+    // than the row's actual actions (trash) instead of reading as a button.
+    static FontDrawable chevron(Context context, Glyph g) {
+        int color = resolveThemeColor(context, android.R.attr.textColorHint, 0xffaaaaaa);
+        return make(context, g, 13, color);
+    }
 
-        @Override public void draw(Canvas canvas) {
-            Paint.FontMetrics metrics = paint.getFontMetrics();
-            float x = getBounds().exactCenterX();
-            float y = getBounds().exactCenterY() - (metrics.ascent + metrics.descent) / 2f;
-            canvas.drawText(String.valueOf(icon), x, y, paint);
-        }
+    // These icons are drawn directly in a Toolbar (bookmark toggle, etc.), so
+    // they need to contrast with colorPrimary the same way the Toolbar's own
+    // title text does - hence the theme's colorOnPrimary (below), not a fixed
+    // colour.
+    static FontDrawable actionBar(Context context, Glyph g) {
+        // 20dp (not the framework action icon's nominal 24dp): the glyphs carry
+        // little built-in padding, so they read larger at equal size - 20dp
+        // brings them into line with the framework overflow "⋮" they sit next to.
+        return actionBar(context, g, 20);
+    }
 
-        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
-        @Override public void setColorFilter(ColorFilter colorFilter) { paint.setColorFilter(colorFilter); }
-        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
-        @Override public int getIntrinsicWidth() { return sizePx; }
-        @Override public int getIntrinsicHeight() { return sizePx; }
+    // Same colorOnPrimary tint as the standard app-bar icon, at a caller-chosen
+    // size - the find bar's up/down carets use a slightly smaller glyph so they
+    // don't read as heavy next to the find field.
+    static FontDrawable actionBar(Context context, Glyph g, int sizeDp) {
+        int color = resolveThemeColor(context, com.google.android.material.R.attr.colorOnPrimary, 0xff000000);
+        return make(context, g, sizeDp, color);
+    }
+
+    // Contextual-action-bar (multi-select) icons. The CAB carries the same
+    // colorPrimary background as the Toolbar (see Widget.Aard2.ActionMode), so its
+    // icons take the Toolbar's colorOnPrimary tint too - matching the CAB's own
+    // title and close-button colour on the blue bar.
+    static FontDrawable actionMode(Context context, Glyph g) {
+        int color = resolveThemeColor(context, com.google.android.material.R.attr.colorOnPrimary, 0xff000000);
+        // Same 20dp as the main Toolbar's actionBar() icons so the CAB matches
+        // the regular toolbar rather than looking oversized next to it.
+        return make(context, g, 20, color);
+    }
+
+    static FontDrawable text(Context context, Glyph g) {
+        int color = resolveThemeColor(context, android.R.attr.textColorSecondary, 0xff888888);
+        return make(context, g, 16, color);
+    }
+
+    // colorError is Material's own dynamic-color-aware error role, so the icon
+    // tracks the active theme.
+    static FontDrawable errorText(Context context, Glyph g) {
+        int color = resolveThemeColor(context, androidx.appcompat.R.attr.colorError, 0xffcc0000);
+        return make(context, g, 16, color);
+    }
+
+    // Placeholder icon for an empty list (e.g. "no bookmarks yet") -
+    // textColorHint is the framework's own role for exactly this kind of
+    // de-emphasized, content-absent state.
+    static FontDrawable emptyView(Context context, Glyph g) {
+        int color = resolveThemeColor(context, android.R.attr.textColorHint, 0xffcccccc);
+        return make(context, g, 52, color);
     }
 
 }

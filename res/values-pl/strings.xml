@@ -6,7 +6,6 @@
     <string name="subtitle_bookmark">Zakładki</string>
     <string name="subtitle_history">Historia</string>
     <string name="subtitle_dictionaries">Słowniki</string>
-    <string name="action_find_dictionaries">Znajdź słowniki</string>
     <string name="action_find_in_page">Znajdź na stronie</string>
     <string name="action_bookmark_article">Dodaj do zakładek</string>
     <string name="action_filter">Filtruj</string>
@@ -23,12 +22,10 @@
     <plurals name="dict_item_count">
         <item quantity="one">%,d element</item>
         <item quantity="few">%,d elementy</item>
+        <item quantity="many">%,d elementów</item>
         <item quantity="other">%,d elementów</item>
     </plurals>
 
-    <string name="action_zoom_out">Oddal</string>
-    <string name="action_zoom_in">Przybliż</string>
-    <string name="action_zoom_reset">Domyślne powiększenie </string>
     <string name="action_select_style">Styl...</string>
     <string name="select_style">Wybierz styl</string>
     <string name="default_style_title">Domyślny</string>
@@ -37,20 +34,12 @@
     <string name="setting_remote_content_wifi">Gdy korzystasz z Wi-Fi</string>
     <string name="setting_remote_content_never">Nigdy</string>
     <string name="setting_remote_content">Załaduj zdalną zawartość</string>
-    <string name="setting_about">O aplikacji %1$s</string>
+    <string name="setting_about_section">O aplikacji</string>
     <string name="application_license_name">GNU General Public License v3</string>
-    <string name="application_license_url">https://gnu.org/licenses/gpl.html</string>
     <string name="application_version">Wersja %1$s</string>
-    <string name="setting_clear_cache">Wyczyść pamięć podręczną</string>
-    <string name="setting_clear_cache_subtitle">Usuń zawartość pamięci podręcznej z uwzględnieniem zdalnych zdjęć</string>
-    <string name="confirm_clear_cached_content">Wyczyścić zawartość pamięci podręcznej?</string>
     <string name="article_collection_nothing_found">Nic nie znaleziono</string>
     <string name="article_collection_selected_not_available">Wybrany artykuł nie jest dostępny</string>
     <string name="article_collection_nothing_to_lookup">Nie ma nic do wyszukania</string>
-    <string name="article_view_msg_not_found">Nie znaleziono</string>
-    <string name="dictionaries_please_wait">Proszę czekać</string>
-    <string name="dictionaries_scanning_device">Skanowanie urządzenia w poszukiwaniu słowników...</string>
-    <string name="dictionaries_confirm_forget">Zapomnieć o "%1$s"?</string>
     <string name="lookup_nothing_found">Nic nie znaleziono</string>
     <string name="main_empty_bookmarks">Brak zakładek</string>
     <string name="main_empty_history">Brak historii</string>
@@ -60,11 +49,13 @@
     <plurals name="confirm_delete_bookmark_count">
         <item quantity="one">%,d zakładkę</item>
         <item quantity="few">%,d zakładki</item>
+        <item quantity="many">%,d zakładek</item>
         <item quantity="other">%,d zakładek</item>
     </plurals>
     <plurals name="confirm_delete_history_count">
         <item quantity="one">%,d wpis z historii</item>
         <item quantity="few">%,d wpisy z historii</item>
+        <item quantity="many">%,d wpisów z historii</item>
         <item quantity="other">%,d wpisów z historii</item>
     </plurals>
 
@@ -72,17 +63,9 @@
     <string name="msg_failed_to_read_file">Nie udało się odczytać pliku</string>
     <string name="msg_file_too_big">Plik jest za duży</string>
     <string name="setting_user_styles">Style użytkownika</string>
-    <string name="setting_user_styles_empty">Brak stylów</string>
     <string name="msg_failed_to_store_user_style">Nie udało się zapisać stylu użytkownika</string>
     <string name="setting_user_style_confirm_forget">Zapomnieć %1$s?</string>
-    <string name="msg_file_not_css">Nie wygląda na plik CSS</string>
     <string name="msg_no_activity_to_get_content">Brak dostępnej aplikacji do otwarcia pliku</string>
-    <string name="action_add_dictionaries">Dodaj</string>
-    <string name="title_activity_file_select">Wybierz plik słownika</string>
-    <string name="action_goto_parent_dir">W górę</string>
-    <string name="action_reload_directory">Przeładuj</string>
-    <string name="msg_dictionary_already_open">Już otwarte</string>
-    <string name="msg_dictionary_added">Słownik dodany z %1$s</string>
     <string name="setting_fav_random_search">Używaj tylko ulubionych słowników do losowego wyszukiwania</string>
     <string name="article_collection_invalid_link">Niepoprawny link</string>
     <string name="setting_ui_theme">Styl interfejsu użytkownika</string>
@@ -90,9 +73,30 @@
     <string name="setting_ui_theme_dark">Ciemny</string>
     <string name="action_load_remote_content">Załaduj zdalną zawartość</string>
     <string name="auto_style_title">Automatyczny</string>
-    <string name="action_fullscreen">Pełny ekran</string>
     <string name="setting_use_volume_for_nav">Używaj przyciski głośności do nawigacji</string>
+    <string name="setting_auto_fullscreen_landscape">Automatycznie przełączaj na pełny ekran w trybie poziomym</string>
     <string name="find_hint">Znajdź na stronie</string>
     <string name="find_next">Następne</string>
     <string name="find_previous">Poprzednie</string>
+    <string name="setting_user_styles_add">Dodaj</string>
+    <string name="dictionary_marked_for_random_content_desc">%s, oznaczony do losowego wyszukiwania</string>
+    <string name="setting_record_history">Zapisuj historię</string>
+    <string name="setting_record_history_off_title">Wyłączyć historię?</string>
+    <string name="setting_record_history_off_message">Zapisana historia zostanie usunięta.</string>
+    <string name="setting_record_history_off_confirm">Wyłącz</string>
+    <string name="action_clear_query">Wyczyść</string>
+    <string name="action_download_dictionaries">Pobierz</string>
+    <string name="action_open_dictionaries">Otwórz</string>
+    <string name="action_full_screen">Pełny ekran</string>
+    <string name="action_full_screen_exit">Wyjdź z pełnego ekranu</string>
+    <string name="action_random_article">Losowy artykuł</string>
+    <string name="action_reset">Resetuj</string>
+    <string name="action_text_size">Rozmiar tekstu</string>
+    <string name="action_undo">Cofnij</string>
+    <string name="blob_descriptor_removed">Usunięto „%1$s”</string>
+    <string name="dictionaries_closed">Zamknięto „%1$s”</string>
+    <string name="dictionary_drag_handle">Przeciągnij, aby zmienić kolejność</string>
+    <string name="dictionary_use_for_random">Używaj do losowego wyszukiwania</string>
+    <string name="scroll_to_top">Przewiń do góry</string>
+    <string name="setting_auto_paste">Automatycznie wklejaj ze schowka</string>
 </resources>

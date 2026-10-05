@@ -1,5 +1,5 @@
 plugins {
-    id 'com.android.application' version '7.4.2'
+    id 'com.android.application' version '9.4.1'
 }
 
 repositories {
@@ -8,23 +8,25 @@ repositories {
 }
 
 android {
-    compileSdkVersion 31
+    namespace = 'itkach.aard2'
+    compileSdk 37
 
-    packagingOptions {
-        exclude 'META-INF/LICENSE'
-        exclude 'META-INF/NOTICE'
-        project("slobj").file("exclude.txt").eachLine {
-            line ->
-                println line
-                if (line && line.trim() && !line.startsWith("#")) {
-                    exclude line.trim()
-                }
+    packaging {
+        resources {
+            excludes += ['META-INF/LICENSE', 'META-INF/NOTICE']
+            project("slobj").file("exclude.txt").eachLine {
+                line ->
+                    println line
+                    if (line && line.trim() && !line.startsWith("#")) {
+                        excludes += line.trim()
+                    }
+            }
         }
     }
 
 
-    lintOptions {
-        abortOnError false
+    lint {
+        abortOnError = false
     }
 
     sourceSets {
@@ -59,17 +61,24 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 19
-        targetSdkVersion 34
+        minSdkVersion 23
+        targetSdkVersion 37
     }
 
 }
 
 dependencies {
-    api 'com.android.support:support-v4:27.1.1'
-    api 'com.fasterxml.jackson.core:jackson-databind:2.4+'
-    api 'com.fasterxml.jackson.core:jackson-core:2.4+'
-    api 'com.fasterxml.jackson.core:jackson-annotations:2.4+'
+    api 'androidx.fragment:fragment:1.9.1'
+    api 'androidx.viewpager:viewpager:1.1.0'
+    api 'androidx.recyclerview:recyclerview:1.4.0'
+    api 'androidx.recyclerview:recyclerview-selection:1.2.0'
+    api 'androidx.core:core:1.19.1'
+    api 'androidx.documentfile:documentfile:1.1.0'
+    api 'androidx.annotation:annotation:1.11.0'
+    api 'com.google.android.material:material:1.14.0'
+    api 'com.fasterxml.jackson.core:jackson-databind:2.22.3'
+    api 'com.fasterxml.jackson.core:jackson-core:2.22.3'
+    api 'com.fasterxml.jackson.core:jackson-annotations:2.22'
     api project(':slobj')
     api project(':slobber')
 }

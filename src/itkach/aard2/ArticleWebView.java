@@ -1,5 +1,6 @@
 package itkach.aard2;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -9,16 +10,19 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
@@ -27,11 +31,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeSet;
 
 public class ArticleWebView extends SearchableWebView {
@@ -43,10 +46,7 @@ public class ArticleWebView extends SearchableWebView {
 
     String TAG = getClass().getSimpleName();
 
-    static final String PREF = "articleView";
     private static final String PREF_TEXT_ZOOM = "textZoom";
-    private static final String PREF_STYLE = "style.";
-    private static final String PREF_STYLE_AVAILABLE = "style.available.";
     static final String PREF_REMOTE_CONTENT = "remoteContent";
     static final String PREF_REMOTE_CONTENT_ALWAYS = "always";
     static final String PREF_REMOTE_CONTENT_WIFI = "wifi";
@@ -75,10 +75,11 @@ public class ArticleWebView extends SearchableWebView {
 
     private String              currentSlobId;
     private String              currentSlobUri;
+    // The style resolved for the page as it was loaded (baked into its request
+    // URL server-side). Used to tell whether learning the page's declared styles
+    // changes the resolution - see setStyleTitles. Main thread only.
+    private String              appliedStyleTitle;
     private ConnectivityManager connectivityManager;
-
-    private Timer               timer;
-    private TimerTask           applyStylePref;
 
     boolean forceLoadRemoteContent;
 
@@ -92,6 +93,21 @@ public class ArticleWebView extends SearchableWebView {
         if (!this.styleTitles.equals(newStyleTitlesSet)) {
             this.styleTitles = newStyleTitlesSet;
             saveAvailableStylesPref(this.styleTitles);
+            // The first article from a dictionary is served in the style resolved
+            // against an empty available-styles set (this is what populates it), so
+            // an "Auto" page in the dark UI comes up in Default rather than the
+            // dictionary's night style. Now that the styles are known, re-resolve
+            // and re-apply if that changed the answer. Gated on an actual change so
+            // the common case - and every load where the set was already known -
+            // doesn't reflow (see onPageStarted). Posted: this runs off the UI
+            // thread (a JavaScript bridge callback).
+            post(() -> {
+                String resolved = getPreferredStyle();
+                if (!resolved.equals(appliedStyleTitle)) {
+                    appliedStyleTitle = resolved;
+                    setStyle(resolved);
+                }
+            });
         }
 
         if (Log.isLoggable(TAG, Log.DEBUG)) {
@@ -108,6 +124,10 @@ public class ArticleWebView extends SearchableWebView {
     public ArticleWebView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
+        // No setWebContentsDebuggingEnabled: WebView already turns web contents
+        // debugging on for debuggable (debug) builds, and a release build has no
+        // business exposing DevTools.
+
         connectivityManager = (ConnectivityManager) context
                 .getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -123,25 +143,6 @@ public class ArticleWebView extends SearchableWebView {
         autoStyleTitle = r.getString(R.string.auto_style_title);
 
         this.addJavascriptInterface(this, "$SLOB");
-
-        timer = new Timer();
-
-        final Runnable applyStyleRunnable = new Runnable() {
-            @Override
-            public void run() {
-                applyStylePref();
-            }
-        };
-
-        applyStylePref = new TimerTask() {
-            @Override
-            public void run() {
-                android.os.Handler handler = getHandler();
-                if (handler != null) {
-                    handler.post(applyStyleRunnable);
-                }
-            }
-        };
 
         this.setWebViewClient(new WebViewClient() {
 
@@ -164,12 +165,19 @@ public class ArticleWebView extends SearchableWebView {
                     List<Long> tsList = new ArrayList<Long>();
                     tsList.add(System.currentTimeMillis());
                     times.put(url, tsList);
+                    // Only injects $styleSwitcher itself (needed so
+                    // onPageFinished below can ask it what styles this
+                    // page declares) - does NOT re-apply a style. The
+                    // canned style is already correctly active from the
+                    // very first byte the server sent (see Slobber's
+                    // StylePreference/Application.getUrl(Blob)); calling
+                    // $styleSwitcher.setStyle() again here would toggle
+                    // stylesheets' disabled state pointlessly, forcing an
+                    // avoidable reflow shortly after the page already
+                    // rendered correctly - which is visible as a jump in
+                    // the surrounding native UI (the action bar), not just
+                    // inside the WebView's own content.
                     view.evaluateJavascript(styleSwitcherJs, null);
-                    try {
-                        timer.schedule(applyStylePref, 250, 200);
-                    } catch (IllegalStateException ex) {
-                        Log.w(TAG, "Failed to schedule applyStylePref in view " + view.getId(), ex);
-                    }
                 }
 
             }
@@ -187,15 +195,33 @@ public class ArticleWebView extends SearchableWebView {
                     if (tsList.isEmpty()) {
                         Log.d(TAG, "onPageFinished: really done with " + url);
                         times.remove(url);
-                        applyStylePref.cancel();
                     }
                 }
                 else {
                     Log.w(TAG, "onPageFinished: Unexpected page finished event for " + url);
                 }
+                // Both canned and user styles are already correctly active from
+                // the very first byte the server sent - Slobber applies the
+                // ?style= preference server-side, selecting a built-in alternate
+                // and/or linking the user stylesheet (see
+                // Application.getUrl(Blob) / StylePreference / /user-styles). So
+                // nothing needs to be (re-)applied here; this only discovers the
+                // page's declared style titles for the picker dialog.
                 view.evaluateJavascript(styleSwitcherJs +
                         ";$SLOB.setStyleTitles($styleSwitcher.getTitles())", null);
-                applyStylePref();
+            }
+
+            @Override
+            public void onPageCommitVisible(WebView view, String url) {
+                // First pixels of the new page are up - the earliest point the
+                // computed style is real and painted, so measure and cache the
+                // colors the page actually paints here (onPageFinished is later;
+                // the pre-load placeholder in updateBackgrounColor is earlier and
+                // has only the style name to go on).
+                if (url == null || url.startsWith("about:")) {
+                    return;
+                }
+                probeColors();
             }
 
             @Override
@@ -211,7 +237,7 @@ public class ArticleWebView extends SearchableWebView {
                     return null;
                 }
                 String host = parsed.getHost();
-                if (host == null || host.toLowerCase().equals(LOCALHOST)) {
+                if (host == null || host.toLowerCase(Locale.ROOT).equals(LOCALHOST)) {
                     return null;
                 }
                 if (allowRemoteContent()) {
@@ -314,72 +340,55 @@ public class ArticleWebView extends SearchableWebView {
             return false;
         }
         if (prefValue.equals(PREF_REMOTE_CONTENT_WIFI)) {
-            NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
-            if (networkInfo != null) {
-                int networkType = networkInfo.getType();
-                if (networkType == ConnectivityManager.TYPE_WIFI ||
-                        networkType == ConnectivityManager.TYPE_ETHERNET) {
-                    return true;
-                }
-            }
+            // The "When on Wi-Fi" option is really about not paying for data, and
+            // Wi-Fi is only a proxy for that - a phone on a mobile hotspot is on
+            // Wi-Fi but still metered. So implement it as "when unmetered", which
+            // is what the user means: it skips a metered hotspot (correctly, even
+            // though that's Wi-Fi) and honours any network the user has manually
+            // marked metered in system settings.
+            return !connectivityManager.isActiveNetworkMetered();
         }
         return false;
     }
 
     String[] getAvailableStyles() {
-        final SharedPreferences prefs = getContext().getSharedPreferences(
-                "userStyles", Activity.MODE_PRIVATE);
-        Map<String, ?> data = prefs.getAll();
-        List<String> names = new ArrayList<String>(data.keySet());
-        Util.sort(names);
-        names.addAll(styleTitles);
+        // The document's own built-in styles first, then the Default/Auto
+        // sentinels, then the user's own styles last.
+        List<String> names = new ArrayList<String>(styleTitles);
         names.add(defaultStyleTitle);
         names.add(autoStyleTitle);
+        List<String> userStyles = new ArrayList<String>(getApplication().userStyleNames());
+        Util.sort(userStyles);
+        names.addAll(userStyles);
         return names.toArray(new String[names.size()]);
     }
 
-    private boolean isUIDark() {
-        Application app = getApplication();
-        String uiTheme = app.getPreferredTheme();
-        return uiTheme.equals(Application.PREF_UI_THEME_DARK);
-    }
-
-    private String getAutoStyle() {
-        if (this.isUIDark()) {
-            for (String title : styleTitles) {
-                String titleLower = title.toLowerCase();
-                if (titleLower.contains("night") || titleLower.contains("dark")) {
-                    return title;
-                }
-            }
-        }
-        Log.d(TAG, "Auto style will return " + defaultStyleTitle);
-        return defaultStyleTitle;
-    }
-
+    // Applies a style in place (the picker's live preview), the client-side twin
+    // of Slobber's server-side application on load. A user style: link its
+    // stylesheet from /user-styles and drop the document's built-in alternates
+    // (setStyle("")). A built-in one: remove any user link and enable that
+    // alternate. Either way the CSS itself comes from the server - the injected
+    // <link> is fetched by the WebView - so no CSS text passes through here.
     private void setStyle(String styleTitle) {
-        String js;
-        final SharedPreferences prefs = getContext().getSharedPreferences(
-                "userStyles", Activity.MODE_PRIVATE);
-        if (prefs.contains(styleTitle)){
-            String css = prefs.getString(styleTitle, "");
-            String elementId = getCurrentSlobId();
-            js = String.format(
-                    "javascript:" + Application.jsUserStyle, elementId, css);
-        }
-        else {
-            js = String.format(
-                    "javascript:" + Application.jsClearUserStyle + Application.jsSetCannedStyle,
-                    getCurrentSlobId(), styleTitle);
-        }
+        boolean userStyle = getApplication().isUserStyle(styleTitle);
+        String userHref = userStyle ? "/user-styles/" + Uri.encode(styleTitle) : "";
+        String cannedTitle = userStyle ? "" : styleTitle;
+        // Each script is a function expression; invoke it with its value as a
+        // JSON-quoted argument, so a style name with an apostrophe or other
+        // special character (e.g. a user file "Bob's.css") can't break the injected
+        // JS. Both run in one evaluateJavascript, so a syntax error would drop the
+        // whole switch.
+        String js = String.format("%s(%s);%s(%s);",
+                Application.jsSetUserStyle, JSONObject.quote(userHref),
+                Application.jsSetCannedStyle, JSONObject.quote(cannedTitle));
         if (Log.isLoggable(TAG, Log.DEBUG)) {
             Log.d(TAG, js);
         }
-        this.loadUrl(js);
+        this.evaluateJavascript(js, null);
     }
 
     private SharedPreferences prefs() {
-        return getContext().getSharedPreferences(PREF, Activity.MODE_PRIVATE);
+        return getContext().getSharedPreferences(Application.ARTICLE_VIEW_PREF, Activity.MODE_PRIVATE);
     }
 
     void applyTextZoomPref() {
@@ -407,7 +416,7 @@ public class ArticleWebView extends SearchableWebView {
     private void saveAvailableStylesPref(Set<String> styleTitles) {
         SharedPreferences prefs = prefs();
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putStringSet(PREF_STYLE_AVAILABLE + currentSlobUri, styleTitles);
+        editor.putStringSet(Application.PREF_STYLE_AVAILABLE + currentSlobUri, styleTitles);
         boolean success = editor.commit();
         if (!success) {
             Log.w(TAG, "Failed to save article view available styles pref");
@@ -422,7 +431,7 @@ public class ArticleWebView extends SearchableWebView {
         SharedPreferences prefs = prefs();
         Log.d(TAG, "Available styles before pref load: " + styleTitles.size());
         styleTitles = new TreeSet(
-                prefs.getStringSet(PREF_STYLE_AVAILABLE + currentSlobUri,
+                prefs.getStringSet(Application.PREF_STYLE_AVAILABLE + currentSlobUri,
                         Collections.EMPTY_SET));
         Log.d(TAG, "Loaded available styles: " + styleTitles.size());
     }
@@ -433,7 +442,7 @@ public class ArticleWebView extends SearchableWebView {
             return;
         }
         SharedPreferences prefs = prefs();
-        String prefName = PREF_STYLE + currentSlobUri;
+        String prefName = Application.PREF_STYLE + currentSlobUri;
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(prefName, styleTitle);
         boolean success = editor.commit();
@@ -442,21 +451,17 @@ public class ArticleWebView extends SearchableWebView {
         }
     }
 
-    private String getStylePreferenceValue() {
-        return prefs().getString(PREF_STYLE + currentSlobUri, autoStyleTitle);
-    }
-
-    private boolean isAutoStyle(String title) {
-        return title.equals(autoStyleTitle);
-    }
-
     @JavascriptInterface
     public String getPreferredStyle() {
         if (currentSlobUri == null) {
             return "";
         }
-        String styleTitle = getStylePreferenceValue();
-        String result = isAutoStyle(styleTitle) ? getAutoStyle() : styleTitle;
+        // Application.resolveStyleTitle() re-reads the same
+        // SharedPreferences data this instance's styleTitles/currentSlobUri
+        // are themselves sourced from (setStyleTitles() persists them
+        // synchronously - see saveAvailableStylesPref()) - so delegating
+        // here instead of resolving locally can't observe stale data.
+        String result = getApplication().resolveStyleTitle(currentSlobUri);
         Log.d(TAG, "getPreferredStyle() will return " + result);
         return result;
     }
@@ -469,7 +474,6 @@ public class ArticleWebView extends SearchableWebView {
     @JavascriptInterface
     public void onStyleSet(String title) {
         Log.d(TAG, "Style set! " + title);
-        applyStylePref.cancel();
     }
 
     void applyStylePref() {
@@ -477,30 +481,13 @@ public class ArticleWebView extends SearchableWebView {
         this.setStyle(styleTitle);
     }
 
-    boolean textZoomIn() {
-        WebSettings settings = getSettings();
-        int newZoom = settings.getTextZoom() + 20;
-        if (newZoom <= 200) {
-            settings.setTextZoom(newZoom);
-            saveTextZoomPref();
-            return true;
-        }
-        else {
-            return false;
-        }
+    int getTextZoom() {
+        return getSettings().getTextZoom();
     }
 
-    boolean textZoomOut() {
-        WebSettings settings = getSettings();
-        int newZoom = settings.getTextZoom() - 20;
-        if (newZoom >= 40) {
-            settings.setTextZoom(newZoom);
-            saveTextZoomPref();
-            return true;
-        }
-        else {
-            return false;
-        }
+    void setTextZoom(int zoom) {
+        getSettings().setTextZoom(Math.max(40, Math.min(200, zoom)));
+        saveTextZoomPref();
     }
 
     void resetTextZoom() {
@@ -528,25 +515,92 @@ public class ArticleWebView extends SearchableWebView {
         }
     }
 
+    // The WebView's own background shows through before the page's style paints
+    // (and after, wherever the style sets no background), so it is preset to the
+    // color the page is expected to paint, to avoid a flash of the wrong one.
+    // That color is the one this dictionary+style was actually measured to paint
+    // last time (probeColors below caches it per style, keyed on the UI theme
+    // too). The very first time a dictionary+style is shown there's no
+    // measurement yet, so fall back to the cheap prior - dark if the style's name
+    // says "night"/"dark", else white - which that first load's probe then
+    // replaces with the real color for next time.
     private void updateBackgrounColor() {
-        int color = Color.WHITE;
-        String preferredStyle = getPreferredStyle().toLowerCase();
-        // webview's default background may "show through" before page
-        // load started and/or before page's style applies (and even after that if
-        // style doesn't explicitly set background).
-        // this is a hack to preemptively set "right" background and prevent
-        // extra flash
-        //
-        // TODO Hack it even more - allow style title to include background color spec
-        // so that this can work with "strategically" named user css
-        if (preferredStyle.contains("night") || preferredStyle.contains("dark")) {
-            color = Color.BLACK;
-        }
+        String preferredStyle = getPreferredStyle();
+        appliedStyleTitle = preferredStyle;
+        int[] cached = getApplication().getStyleColors(currentSlobUri, preferredStyle);
+        int color = cached != null ? cached[0]
+                : (Application.isDarkStyleTitle(preferredStyle) ? Color.BLACK : Color.WHITE);
         setBackgroundColor(color);
+    }
+
+    // Measures the colors the page actually painted (probecolors.js reads them
+    // from the real CSS engine) and caches them for this dictionary+style. Runs
+    // at first paint (onPageCommitVisible); the cache is self-healing, so a style
+    // edit costs at most one stale placeholder before the next probe corrects it.
+    private void probeColors() {
+        final String slobUri = currentSlobUri;
+        if (slobUri == null) {
+            return;
+        }
+        final String styleTitle = getPreferredStyle();
+        evaluateJavascript(Application.jsProbeColors, value ->
+                getApplication().cacheProbedColors(slobUri, styleTitle, value));
     }
 
     private Application getApplication() {
         return (Application)((Activity)getContext()).getApplication();
+    }
+
+    // Volume-key page scrolling. The framework's WebView.pageDown/pageUp move
+    // only a partial page and animate through the scroller's gentle easing, which
+    // feels short and sluggish; these replace them with a full-page move and a
+    // brief, snappy animation. See ArticleCollectionActivity's key handlers.
+    private static final float PAGE_FRACTION = 0.92f;  // one screen, small overlap
+    private static final int   PAGE_SCROLL_MS = 150;
+
+    private ValueAnimator scrollAnim;
+
+    // Scroll one page (down if true, up otherwise). Returns false when already at
+    // that edge, so the caller can page to the adjacent article instead.
+    public boolean pageScroll(boolean down) {
+        int dir = down ? 1 : -1;
+        if (!canScrollVertically(dir)) {
+            return false;
+        }
+        animateScrollBy(dir * (int) (getHeight() * PAGE_FRACTION));
+        return true;
+    }
+
+    // Jump straight to the top (used by the scroll-to-top button).
+    public void scrollToTop() {
+        cancelScrollAnim();
+        scrollTo(getScrollX(), 0);
+    }
+
+
+    private int maxScrollY() {
+        return Math.max(0, computeVerticalScrollRange() - getHeight());
+    }
+
+    private void animateScrollBy(int dy) {
+        cancelScrollAnim();
+        int from = getScrollY();
+        int to = Math.max(0, Math.min(from + dy, maxScrollY()));
+        if (to == from) {
+            return;
+        }
+        scrollAnim = ValueAnimator.ofInt(from, to);
+        scrollAnim.setDuration(PAGE_SCROLL_MS);
+        scrollAnim.setInterpolator(new DecelerateInterpolator());
+        scrollAnim.addUpdateListener(a ->
+                scrollTo(getScrollX(), (int) a.getAnimatedValue()));
+        scrollAnim.start();
+    }
+
+    private void cancelScrollAnim() {
+        if (scrollAnim != null && scrollAnim.isRunning()) {
+            scrollAnim.cancel();
+        }
     }
 
     private void setCurrentSlobIdFromUrl(String url) {
@@ -569,9 +623,4 @@ public class ArticleWebView extends SearchableWebView {
         }
     }
 
-    @Override
-    public void destroy() {
-        super.destroy();
-        timer.cancel();
-    }
 }
