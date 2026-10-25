@@ -1,11 +1,15 @@
 package itkach.aard2;
 
+import android.annotation.TargetApi;
+import android.os.Build;
 import android.util.Log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,17 +68,14 @@ class DescriptorStore<T extends BaseDescriptor> {
         }
         // Write to a temp file and rename it into place, so a concurrent reader
         // (the background load at startup) never sees a partially-written file -
-        // which load() would treat as corrupt and delete. renameTo is atomic
-        // within a filesystem, and the temp lives in the same dir as the target.
+        // which load() would treat as corrupt and delete. The temp lives in the
+        // same directory as the target so replacing it can be atomic.
         File target = new File(dir, item.id);
         File tmp = null;
         try {
             tmp = File.createTempFile(item.id + "-", TMP_SUFFIX, dir);
             mapper.writeValue(tmp, item);
-            if (!tmp.renameTo(target)) {
-                throw new IOException(
-                        String.format("Failed to rename %s to %s", tmp, target));
-            }
+            replaceAtomically(tmp, target);
             tmp = null;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -83,6 +84,20 @@ class DescriptorStore<T extends BaseDescriptor> {
                 tmp.delete();
             }
         }
+    }
+
+    private static void replaceAtomically(File source, File target) throws IOException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            replaceAtomicallyO(source, target);
+        } else if (!source.renameTo(target)) {
+            throw new IOException(String.format("Failed to rename %s to %s", source, target));
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.O)
+    private static void replaceAtomicallyO(File source, File target) throws IOException {
+        Files.move(source.toPath(), target.toPath(),
+                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
     }
 
     boolean delete(String itemId) {
