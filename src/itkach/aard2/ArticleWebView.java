@@ -21,6 +21,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 import org.json.JSONObject;
 
@@ -263,6 +264,9 @@ public class ArticleWebView extends SearchableWebView {
                         getContext().startActivity(browserIntent);
                     } catch (ActivityNotFoundException e) {
                         Log.w(TAG, "No activity found for external URL: " + url, e);
+                        // E.g. a mailto: or geo: link with no mail or maps app installed.
+                        Toast.makeText(getContext(), R.string.msg_no_activity_to_open_link,
+                                Toast.LENGTH_LONG).show();
                     }
                     return true;
                 }

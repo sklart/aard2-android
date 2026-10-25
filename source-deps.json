@@ -2,13 +2,13 @@
   {
     "name": "slobj",
     "repo": "https://github.com/sklart/slobj.git",
-    "sha": "b4377dc3df98998596e40659b6acfc3adefe59fe",
-    "describe": "0.13"
+    "sha": "d3ff885a930a6cbd674f7e5728758f16206fecfe",
+    "describe": "0.12-8-gd3ff885"
   },
   {
     "name": "slobber",
     "repo": "https://github.com/sklart/slobber.git",
-    "sha": "cd6a1ea7f045a8576fbe529b459ba2fea537e3fb",
-    "describe": "0.12"
+    "sha": "64e458246bc45c33275db732f222da71bb86a6f0",
+    "describe": "0.11-17-g64e4582"
   }
 ]
